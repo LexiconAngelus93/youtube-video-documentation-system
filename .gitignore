@@ -1,0 +1,28 @@
+# Ignore runtime directories and files
+downloads/
+compilations/
+sessions/
+logs/
+*.log
+
+# Ignore temporary files
+*.tmp
+*.temp
+temp-audio.m4a
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Ignore IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignore OS files
+.DS_Store
+Thumbs.db

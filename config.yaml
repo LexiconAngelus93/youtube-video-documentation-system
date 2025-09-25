@@ -1,0 +1,107 @@
+# Configuration file for YouTube Video Documentation System
+
+# Search settings
+search_settings:
+  keywords:
+    - "police brutality"
+    - "police misconduct"
+    - "police abuse"
+    - "cop watcher"
+    - "first amendment audit"
+    - "police complaint"
+    - "excessive force"
+    - "police violence"
+    - "bad cop"
+    - "corrupt police"
+    - "police accountability"
+    - "police reform"
+    - "police oversight"
+    - "civil rights violation"
+    - "unlawful arrest"
+    - "police harassment"
+    - "police intimidation"
+    - "police cover up"
+    - "police shooting"
+    - "police taser"
+    - "police pepper spray"
+    - "police dog attack"
+    - "police raid"
+    - "no knock warrant"
+    - "police state"
+    - "police tyranny"
+    - "police injustice"
+    - "police corruption"
+    - "police scandal"
+    - "police lawsuit"
+  
+  start_date: "2010-01-01"
+  end_date: "today"
+  region: "US"
+  language: "en"
+  request_delay: 1.0  # Seconds between API requests
+  max_results_per_keyword: 500
+
+# Download settings
+download_settings:
+  quality: "best"  # yt-dlp quality selector
+  format: "mp4"    # Preferred video format
+  output_dir: "downloads/raw_videos"
+  metadata_dir: "downloads/metadata"
+  max_filesize: "500M"  # Maximum file size per video
+  concurrent_downloads: 3  # Number of parallel downloads
+  retry_attempts: 3
+  
+# Compilation settings
+compilation_settings:
+  output_dir: "compilations"
+  target_duration_minutes: 15  # Target length for each compilation
+  max_duration_minutes: 20     # Maximum length for each compilation
+  min_duration_minutes: 10     # Minimum length for each compilation
+  video_quality: "720p"        # Output quality for compilations
+  attribution_duration: 5      # Seconds to show source attribution
+  attribution_position: "bottom"  # Position of attribution text
+  
+# Categorization settings
+categorization:
+  categories:
+    traffic_stop:
+      keywords: ["traffic stop", "pulled over", "speeding", "dui", "checkpoint"]
+      priority: 1
+    
+    protest:
+      keywords: ["protest", "demonstration", "rally", "march", "blm", "black lives matter"]
+      priority: 2
+    
+    arrest:
+      keywords: ["arrest", "handcuffed", "detained", "custody", "booking"]
+      priority: 3
+    
+    excessive_force:
+      keywords: ["excessive force", "brutality", "beating", "taser", "pepper spray"]
+      priority: 4
+    
+    shooting:
+      keywords: ["shooting", "shot", "fired", "gun", "weapon"]
+      priority: 5
+    
+    raid:
+      keywords: ["raid", "swat", "no knock", "warrant", "search"]
+      priority: 6
+    
+    misconduct:
+      keywords: ["misconduct", "corruption", "abuse", "violation", "complaint"]
+      priority: 7
+
+# Logging settings
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  file: "logs/app.log"
+  max_size_mb: 10
+  backup_count: 5
+  
+# Output settings
+output:
+  save_metadata: true
+  save_thumbnails: true
+  create_index: true  # Create an index file of all videos
+  export_format: "json"  # json, csv, xlsx
