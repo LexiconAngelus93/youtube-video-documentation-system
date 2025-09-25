@@ -1,1 +1,99 @@
-MDl3b3JsZC5cblxuIyMgRmVhdHVyZXNcblxuLSAnKipZb3VUdWJlIFNlYXJjaDoqKiBTZWFyY2hlcyBZb3VUdWJlIGZvciB2aWRlb3MgYmFzZWQgb24gYSBjdXN0b21pemFibGUgbGlzdCBvZiBrZXl3b3Jkcy4KLSAnKipWaWRlbyBEb3dubG9hZDoqKiBEb3dubG9hZHMgdGhlIHNlYXJjaGVkIHZpZGVvcywgYWxvbmcgd2l0aCB0aGVpciBtZXRhZGF0YS4KLSAnKipDb250ZW50IEZpbHRlcmluZzoqKiBGaWx0ZXJzIHZpZGVvcyBiYXNlZCBvbiBkdXJhdGlvbiwgdmlldyBjb3VudCwgYW5kIG90aGVyIGNyaXRlcmlhLgotICcqKkF1dG9tYXRpYyBDYXRlZ29yaXphdGlvbjoqKiBDYXRlZ29yaXplcyB2aWRlb3MgaW50byBwcmVkZWZpbmVkIHRvcGljcy4KLSAnKipWaWRlbyBDb21waWxhdGlvbjoqKiBDcmVhdGVzIGNvbXBpbGF0aW9uIHZpZGVvcyBmcm9tIHRoZSBkb3dubG9hZGVkIGNsaXBzLgotICcqKFNvdXJjZSBBdHRyaWJ1dGlvbjoqKiBBZGRzIGEgdGV4dCBvdmVybGF5IHRvIGVhY2ggdmlkZW8gd2l0aCBzb3VyY2UgaW5mb3JtYXRpb24uXG5cbiMjIEluc3RhbGxhdGlvblxuXG5gYGBzaGVsbApwaXAzIGluc3RhbGwgeW91dHViZS1kbCBtb3ZpZXB5IFB5WUFNTApgYGBcblxuIyMgVXNhZ2VcblxuVG8gcnVuIHRoZSBmdWxsIHBpcGVsaW5lLCB1c2UgdGhlIGZvbGxvd2luZyBjb21tYW5kOlxuXG5gYGBzaGVsbApweXRob24zIG1haW4ucHkgLS1tYXgtdmlkZW9zIDEwCmBgYFxuXG4jIyBDb25maWd1cmF0aW9uXG5cblRoZSBgY29uZmlnLnlhbWxgIGZpbGUgYWxsb3dzIGZvciBjdXN0b21pemF0aW9uIG9mIHRoZSBzZWFyY2gsIGRvd25sb2FkLCBhbmQgY29tcGlsYXRpb24gc2V0dGluZ3MuXG5cbiMjIFByb2plY3QgU3RydWN0dXJlXG5cbmBgYAp2aWRlby1kb2N1bWVudGF0aW9uLXN5c3RlbS9cbnx8LS0gY29uZmlnLnlhbWxcbnx8LS0gbWFpbi5weVxufHwtLSBSRUFETUUubWRcbnxcYC0tIHNyYy9cbiAgICB8fC0tICBfX2luaXRfXy5weVxuICAgIHx8LS0gIGNvbnRlbnRfZmlsdGVyLnB5XG4gICAgfHwtLSAgdmlkZW9fY29tcGlsZXIucHlcbiAgICB8YC0tICB5b3V0dWJlX3NlYXJjaGVyLnB5CmBgYFxuXG4jIyBEZXBlbmRlbmNpZXNcblxuLSBZb3VUdWJlIERvd25sb2FkZXI6IGB5dC1kbHAgYC0gQSBjb21tYW5kLWxpbmUgcHJvZ3JhbSB0byBkb3dubG9hZCB2aWRlb3MgZnJvbSBZb3VUdWJlIGFuZCBvdGhlciBzaXRlcy4KLSBNb3ZpZVB5OiBgTW92aWVQeWAgLSBBIExpYnJhcnkgZm9yIHZpZGVvIGVkaXRpbmcsIHdoaWNoIGlzIHVzZWQgdG8gY3JlYXRlIHRoZSBjb21waWxhdGlvbiB2aWRlb3MuCi0gUHlZQU1MOiBgUHlZQU1MYCAtIEEgWUFNTCBwYXJzZXIgYW5kIGVtaXR0ZXIgZm9yIFB5dGhvbi5cblxuIyMgTGljZW5zZVxuXG5UaGlzIHByb2plY3QgaXMgdW5saWNlbnNlZC4gVXNlIGF0IHlvdXIgb3duIHJpc2suXG4iXXG4=
+# YouTube Video Documentation System
+
+A comprehensive Python application designed for journalistic documentation of police misconduct incidents. This system automatically searches YouTube for relevant videos, downloads them, filters content based on configurable criteria, and creates organized compilation videos with proper source attribution.
+
+The system is built to help journalists, researchers, and activists document patterns of police misconduct through systematic video collection and analysis from publicly available sources on YouTube, covering incidents from 2010 to present in the United States.
+
+## Features
+
+- **YouTube Search:** Searches YouTube for videos based on a customizable list of keywords.
+- **Video Download:** Downloads the searched videos, along with their metadata.
+- **Content Filtering:** Filters videos based on duration, view count, and other criteria.
+- **Automatic Categorization:** Categorizes videos into predefined topics.
+- **Video Compilation:** Creates compilation videos from the downloaded clips.
+- **Source Attribution:** Adds a text overlay to each video with source information.
+
+## Quick Installation
+
+### Option 1: One-Command Install (Recommended)
+
+**Linux/macOS:**
+```bash
+curl -sSL https://raw.githubusercontent.com/LexiconAngelus93/youtube-video-documentation-system/main/quick_install.sh | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/LexiconAngelus93/youtube-video-documentation-system/main/quick_install.bat" -OutFile "install.bat" && .\install.bat
+```
+
+**Cross-Platform (Python):**
+```bash
+curl -sSL https://raw.githubusercontent.com/LexiconAngelus93/youtube-video-documentation-system/main/install.py | python3
+```
+
+### Option 2: Manual Installation
+
+1. **Clone the repository:**
+```bash
+git clone https://github.com/LexiconAngelus93/youtube-video-documentation-system.git
+cd youtube-video-documentation-system
+```
+
+2. **Install dependencies:**
+```bash
+pip3 install -r requirements.txt
+```
+
+3. **Create directories:**
+```bash
+mkdir -p downloads/{raw_videos,metadata} compilations sessions logs
+```
+
+## Usage
+
+To run the full pipeline, use the following command:
+
+```shell
+python3 main.py --max-videos 10
+```
+
+## Configuration
+
+The `config.yaml` file allows for customization of the search, download, and compilation settings.
+
+## Project Structure
+
+```
+video-documentation-system/
+├── config.yaml
+├── main.py
+├── requirements.txt
+├── quick_install.sh
+├── quick_install.bat
+├── install.py
+├── README.md
+├── USER_GUIDE.md
+├── TECHNICAL_DOCS.md
+└── src/
+    ├── __init__.py
+    ├── content_filter.py
+    ├── video_compiler.py
+    ├── video_downloader.py
+    └── youtube_searcher.py
+```
+
+## Dependencies
+
+- **yt-dlp** - A command-line program to download videos from YouTube and other sites.
+- **MoviePy** - A library for video editing, which is used to create the compilation videos.
+- **PyYAML** - A YAML parser and emitter for Python.
+
+## Documentation
+
+- **USER_GUIDE.md** - Comprehensive user documentation
+- **TECHNICAL_DOCS.md** - Developer and technical documentation
+
+## License
+
+This project is unlicensed. Use at your own risk.
