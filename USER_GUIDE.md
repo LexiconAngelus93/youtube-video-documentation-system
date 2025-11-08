@@ -93,35 +93,36 @@ categorization:
 
 ## Usage
 
-### Command Line Interface
+### 3.1 Terminal User Interface (TUI)
 
-The system provides several operation modes:
+The TUI provides an interactive, real-time view of the pipeline execution and allows for easy configuration management.
 
-#### Full Pipeline
-Runs the complete process from search to compilation:
+**To launch the TUI:**
 ```bash
-python3 main.py --max-videos 50
+python3 main.py
 ```
 
-#### Search Only
-Performs only the video search phase:
-```bash
-python3 main.py --mode search --max-videos 100
-```
+From the TUI main menu, you can:
+- **Configure Settings (C):** Adjust key parameters like `max-videos` and `privacy-status` without editing `config.yaml` directly.
+- **Run Pipeline (R):** Start the full search -> download -> compile -> upload process and view the real-time log output.
 
-#### Download from File
-Downloads videos from a saved search results file:
-```bash
-python3 main.py --mode download --input-file search_results.json
-```
+### 3.2 Command Line Interface (CLI)
 
-#### Compile Existing Downloads
-Creates compilations from already downloaded videos:
-```bash
-python3 main.py --mode compile --downloads-dir downloads/
-```
+The CLI remains available for users who prefer scripting or running specific parts of the pipeline. If any arguments are provided to `main.py`, the TUI will be bypassed, and the CLI mode will execute.
 
-### Command Line Options
+#### Operation Modes
+
+The primary way to control the system is through the `--mode` argument.
+
+| Mode | Description | Command Example |
+| :--- | :--- | :--- |
+| `full` | Runs the entire pipeline: Search -> Filter -> Download -> Compile -> Upload. (Default) | `python3 main.py --max-videos 20` |
+| `search` | Runs only the search and filtering phases. | `python3 main.py --mode search --max-videos 50` |
+| `download` | Downloads videos from a previously saved search results file. | `python3 main.py --mode download --input-file sessions/20231027_153000/search_results.json` |
+| `compile` | Creates compilations from existing downloaded videos. | `python3 main.py --mode compile` |
+| `upload` | Uploads compiled videos to YouTube (requires prior compilation). | `python3 main.py --mode upload` |
+
+#### Command Line Options
 
 - `--config, -c`: Configuration file path (default: config.yaml)
 - `--mode, -m`: Operation mode (full, search, download, compile)

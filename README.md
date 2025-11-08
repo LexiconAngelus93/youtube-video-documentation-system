@@ -52,10 +52,28 @@ mkdir -p downloads/{raw_videos,metadata} compilations sessions logs
 
 ## Usage
 
-To run the full pipeline, use the following command:
+The system now features a **Terminal User Interface (TUI)** for easy management.
 
-```shell
+**To launch the TUI:**
+```bash
+python3 main.py
+```
+
+**To run the full pipeline via CLI (for scripting):**
+```bash
 python3 main.py --max-videos 10
+```
+
+**To run a specific mode via CLI:**
+```bash
+# Search only
+python3 main.py --mode search --max-videos 50
+
+# Download from a previous search file
+python3 main.py --mode download --input-file sessions/20231027_153000/search_results.json
+
+# Compile from existing downloads
+python3 main.py --mode compile
 ```
 
 ## Configuration
