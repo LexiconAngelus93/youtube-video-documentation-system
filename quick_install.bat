@@ -62,6 +62,9 @@ REM Install Python dependencies
 echo 📦 Installing Python dependencies...
 pip install -r requirements.txt
 
+REM Note: The YouTube Uploader requires the user to manually complete the OAuth 2.0 flow
+REM to generate the 'youtube_credentials.json' file. See USER_GUIDE.md for details.
+
 echo ✅ Dependencies installed
 
 REM Create necessary directories

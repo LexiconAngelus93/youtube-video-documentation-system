@@ -24,6 +24,7 @@ from youtube_searcher import YouTubeSearcher
 from video_downloader import VideoDownloader
 from video_compiler import VideoCompiler
 from content_filter import ContentFilter
+from youtube_uploader import YouTubeUploader
 
 
 class VideoDocumentationSystem:
@@ -49,6 +50,7 @@ class VideoDocumentationSystem:
         self.downloader = VideoDownloader(self.config)
         self.compiler = VideoCompiler(self.config)
         self.content_filter = ContentFilter(self.config)
+        self.uploader = YouTubeUploader(self.config)
         
         # Session tracking
         self.session_id = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -188,11 +190,25 @@ class VideoDocumentationSystem:
             self.logger.info("Step 5: Creating video compilations")
             compilation_results = self.compiler.compile_videos(valid_videos, categorize=True)
             
-            results['compilation_results'] = compilation_results
+            results["compilation_results"] = compilation_results
             
             # Save compilation report
-            compilation_report_file = self.session_dir / 'compilation_report.json'
+            compilation_report_file = self.session_dir / "compilation_report.json"
             self.compiler.save_compilation_report(str(compilation_report_file))
+
+            # Step 6: Upload compilations to YouTube
+            self.logger.info("Step 6: Uploading compilations to YouTube")
+            upload_results = []
+            for compilation in compilation_results.get("compilations", []):
+                self.logger.info(f"Uploading compilation: {compilation.get("name")}")
+                upload_result = self.uploader.upload_video(compilation)
+                upload_results.append(upload_result)
+            results["upload_results"] = upload_results
+
+            # Save upload report
+            upload_report_file = self.session_dir / "upload_report.json"
+            with open(upload_report_file, "w", encoding="utf-8") as f:
+                json.dump(upload_results, f, indent=2, ensure_ascii=False)
             
             results['end_time'] = datetime.now().isoformat()
             results['success'] = True
@@ -313,6 +329,34 @@ class VideoDocumentationSystem:
             self.logger.error(f"Error creating compilations: {str(e)}")
             return {}
     
+    def upload_from_file(self, compilation_report_file: str):
+        """
+        Upload compilations from a saved compilation report file.
+        """
+        self.logger.info(f"Uploading from file: {compilation_report_file}")
+        try:
+            with open(compilation_report_file, "r", encoding="utf-8") as f:
+                compilation_data = json.load(f)
+            
+            compilations = compilation_data.get("results", {}).get("compilations", [])
+            if not compilations:
+                self.logger.warning("No compilations found in the report file.")
+                return
+
+            upload_results = []
+            for compilation in compilations:
+                self.logger.info(f"Uploading compilation: {compilation.get("name")}")
+                upload_result = self.uploader.upload_video(compilation)
+                upload_results.append(upload_result)
+
+            # Save upload report
+            upload_report_file = self.session_dir / "upload_from_file_report.json"
+            with open(upload_report_file, "w", encoding="utf-8") as f:
+                json.dump(upload_results, f, indent=2, ensure_ascii=False)
+
+        except Exception as e:
+            self.logger.error(f"Error uploading from file: {str(e)}")
+
     def get_session_summary(self) -> Dict[str, Any]:
         """
         Get a summary of the current session.
@@ -354,7 +398,7 @@ def main():
     
     parser.add_argument(
         '--mode', '-m',
-        choices=['full', 'search', 'download', 'compile'],
+        choices=["full", "search", "download", "compile", "upload"],
         default='full',
         help='Operation mode (default: full)'
     )
@@ -411,10 +455,16 @@ def main():
             results = system.download_from_file(args.input_file)
             print(f"Downloaded {results.get('stats', {}).get('successful', 0)} videos")
         
-        elif args.mode == 'compile':
+        elif args.mode == "compile":
             print("Creating compilations from downloads...")
             results = system.compile_from_downloads(downloads_dir=args.downloads_dir)
-            print(f"Created {results.get('stats', {}).get('total_compilations', 0)} compilations")
+            print(f"Created {results.get("stats", {}).get("total_compilations", 0)} compilations")
+        elif args.mode == "upload":
+            if not args.input_file:
+                print("Error: --input-file required for upload mode")
+                sys.exit(1)
+            print(f"Uploading from file: {args.input_file}")
+            system.upload_from_file(args.input_file)
         
         # Show session summary
         summary = system.get_session_summary()

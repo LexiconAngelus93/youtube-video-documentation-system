@@ -11,7 +11,10 @@ The system is built to help journalists, researchers, and activists document pat
 - **Content Filtering:** Filters videos based on duration, view count, and other criteria.
 - **Automatic Categorization:** Categorizes videos into predefined topics.
 - **Video Compilation:** Creates compilation videos from the downloaded clips.
+- **Title Pages:** Automatically inserts a title page before each video segment in the compilation, displaying the video title, channel, and upload date.
 - **Source Attribution:** Adds a text overlay to each video with source information.
+- **YouTube Uploader:** Automatically uploads the final compilation videos to a configurable YouTube channel.
+- **AI Content Generation:** Uses an LLM to generate compelling titles and detailed, journalistic descriptions for the uploaded videos.
 
 ## Quick Installation
 
@@ -57,6 +60,18 @@ To run the full pipeline, use the following command:
 ```shell
 python3 main.py --max-videos 10
 ```
+
+### New Operation Modes
+
+The application now supports an `upload` mode and the `full` pipeline includes the upload step.
+
+**Upload Compilations from a Report:**
+```shell
+python3 main.py --mode upload --input-file sessions/20231108_123456/compilation_report.json
+```
+
+**Note on YouTube Upload:**
+The YouTube upload feature requires a one-time manual setup for OAuth 2.0 authentication. Please refer to the **USER_GUIDE.md** for detailed instructions on how to obtain the `client_secrets.json` file and complete the initial login to generate the `youtube_credentials.json` file.
 
 ## Configuration
 

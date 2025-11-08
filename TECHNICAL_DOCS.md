@@ -100,6 +100,40 @@ download_settings:
 
 ### 3. Content Filter (`content_filter.py`)
 
+**Purpose**: Downloads videos and metadata using yt-dlp with quality control and error handling.
+
+**Key Classes**:
+- `VideoDownloader`: Main class for video download operations
+
+**Key Methods**:
+- `download_videos(video_list)`: Downloads a list of videos
+- `_download_single_video(video)`: Downloads an individual video
+- `_get_download_options()`: Configures yt-dlp options
+- `get_downloaded_videos_list()`: Returns list of successfully downloaded videos
+- `save_download_report(filename)`: Saves download statistics
+
+**Configuration Parameters**:
+```yaml
+download_settings:
+  output_dir: str              # Base download directory
+  video_quality: str           # Quality preference ('best', '720p', etc.)
+  audio_quality: str           # Audio quality preference
+  subtitle_languages: List[str] # Subtitle languages to download
+  max_concurrent: int          # Maximum concurrent downloads
+  retry_attempts: int          # Number of retry attempts
+  timeout_seconds: int         # Download timeout
+```
+
+**Download Process**:
+1. Validates video URLs and metadata
+2. Configures yt-dlp with optimal settings
+3. Downloads video, audio, subtitles, and thumbnails
+4. Saves metadata to JSON files
+5. Validates downloaded files
+6. Updates download statistics
+
+### 3. Content Filter (`content_filter.py`)
+
 **Purpose**: Filters and categorizes videos based on configurable criteria.
 
 **Key Classes**:
@@ -140,7 +174,67 @@ def categorize_video(video):
 
 ### 4. Video Compiler (`video_compiler.py`)
 
-**Purpose**: Creates compilation videos with source attribution and quality control.
+**Purpose**: Creates compilation videos with source attribution, title pages, and quality control.
+
+**Key Classes**:
+- `VideoCompiler`: Main class for video compilation operations
+
+**Key Methods**:
+- `compile_videos(video_list, categorize)`: Orchestrates compilation process
+- `_create_category_compilations(category, videos)`: Creates compilations for a category
+- `_create_single_compilation(name, videos, category)`: Creates individual compilation
+- `_create_title_page_clip(video)`: **NEW** Generates a title page clip for a video segment.
+- `_add_attribution_overlay(video_clip, text)`: Adds source attribution overlay
+- `_group_videos_for_compilation(videos)`: Groups videos by target duration
+
+**Compilation Process**:
+1. **Video Validation**: Checks file existence and readability
+2. **Categorization**: Groups videos by incident type
+3. **Chronological Sorting**: Orders videos by upload date
+4. **Duration Grouping**: Creates groups based on target compilation length
+5. **Title Page Addition**: **NEW** Inserts a title page before each video segment.
+6. **Attribution Addition**: Adds source overlay to each video segment
+7. **Video Concatenation**: Combines videos into final compilation
+8. **Quality Processing**: Applies resolution and encoding settings
+9. **Output Generation**: Saves compilation with metadata
+
+**Attribution Overlay**:
+```python
+def create_attribution_text(video):
+    return f"Source: {video['channel_title']}\nVideo ID: {video['video_id']}\nURL: {video['url']}"
+```
+
+### 5. YouTube Uploader (`youtube_uploader.py`)
+
+**Purpose**: **NEW** Generates titles/descriptions and uploads final compilation videos to YouTube.
+
+**Key Classes**:
+- `YouTubeUploader`: Main class for content generation and upload operations
+
+**Key Methods**:
+- `upload_video(compilation_data)`: Orchestrates content generation and upload
+- `_authenticate()`: Handles OAuth 2.0 flow and credential loading
+- `_generate_content(compilation_data)`: Uses LLM to create title and description
+- `_upload_file(filepath, title, description)`: Performs the resumable video upload
+
+**Configuration Parameters**:
+```yaml
+youtube_upload:
+  client_secrets_file: str     # OAuth client secrets file
+  credentials_file: str        # OAuth credentials file
+  privacy_status: str          # 'public', 'unlisted', or 'private'
+llm_settings:
+  model: str                   # LLM model for content generation
+  api_key_env: str             # Environment variable for API key
+```
+
+**Content Generation Process**:
+1. **Prompt Creation**: Gathers compilation metadata (category, video count, segment titles).
+2. **LLM Call**: Sends a prompt to the configured LLM (e.g., `gpt-4.1-mini`).
+3. **Output Parsing**: Parses the LLM's JSON response for title and description.
+4. **Tone Enforcement**: Prompt is engineered to ensure a journalistic and objective tone.
+
+### 6. Main Application (`main.py`)
 
 **Key Classes**:
 - `VideoCompiler`: Main class for video compilation operations
@@ -168,7 +262,7 @@ def create_attribution_text(video):
     return f"Source: {video['channel_title']}\nVideo ID: {video['video_id']}\nURL: {video['url']}"
 ```
 
-## Main Application (`main.py`)
+### 6. Main Application (`main.py`)
 
 **Purpose**: Orchestrates the complete pipeline and provides command-line interface.
 
@@ -193,8 +287,17 @@ def run_full_pipeline(max_videos):
     # Step 5: Create compilations
     compilation_results = compiler.compile_videos(valid_videos)
     
+    # Step 6: Upload compilations (NEW)
+    upload_results = uploader.upload_compilations(compilation_results)
+    
     return results
 ```
+
+**New Command Line Modes**:
+- **`upload`**: Allows uploading from a previously generated compilation report.
+  ```bash
+  python3 main.py --mode upload --input-file path/to/compilation_report.json
+  ```
 
 ## Data Flow and File Formats
 
@@ -242,6 +345,21 @@ def run_full_pipeline(max_videos):
     "filesize_bytes": "integer",
     "success": "boolean"
   }
+}
+```
+
+### Upload Report Format (NEW)
+```json
+{
+  "compilation_name": "string",
+  "category": "string",
+  "upload_status": "string",
+  "youtube_video_id": "string",
+  "youtube_url": "string",
+  "generated_title": "string",
+  "generated_description": "string",
+  "upload_timestamp": "string",
+  "error_message": "string (if upload_status is FAILED)"
 }
 ```
 
