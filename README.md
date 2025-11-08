@@ -12,6 +12,8 @@ The system is built to help journalists, researchers, and activists document pat
 - **Automatic Categorization:** Categorizes videos into predefined topics.
 - **Video Compilation:** Creates compilation videos from the downloaded clips.
 - **Source Attribution:** Adds a text overlay to each video with source information.
+- **YouTube Upload:** Automatically uploads compilations to a configured YouTube channel.
+- **Terminal UI:** An interactive terminal-based user interface for easy management.
 
 ## Quick Installation
 
@@ -74,11 +76,14 @@ python3 main.py --mode download --input-file sessions/20231027_153000/search_res
 
 # Compile from existing downloads
 python3 main.py --mode compile
+
+# Upload compiled videos to YouTube
+python3 main.py --mode upload --input-file sessions/20231027_153000/compilation_report.json
 ```
 
 ## Configuration
 
-The `config.yaml` file allows for customization of the search, download, and compilation settings.
+The `config.yaml` file allows for customization of the search, download, compilation, and upload settings.
 
 ## Project Structure
 
@@ -98,7 +103,9 @@ video-documentation-system/
     ├── content_filter.py
     ├── video_compiler.py
     ├── video_downloader.py
-    └── youtube_searcher.py
+    ├── youtube_searcher.py
+    ├── youtube_uploader.py
+    └── tui.py
 ```
 
 ## Dependencies
@@ -106,6 +113,8 @@ video-documentation-system/
 - **yt-dlp** - A command-line program to download videos from YouTube and other sites.
 - **MoviePy** - A library for video editing, which is used to create the compilation videos.
 - **PyYAML** - A YAML parser and emitter for Python.
+- **google-api-python-client** - Google API client for YouTube uploads.
+- **textual** - A TUI (Text User Interface) framework for Python.
 
 ## Documentation
 

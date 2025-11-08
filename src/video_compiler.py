@@ -400,21 +400,34 @@ class VideoCompiler:
         
         for i, video in enumerate(videos):
             try:
-                # Load video clip (first 5 seconds for testing)
+                # Load video clip
                 video_clip = VideoFileClip(video["filepath"])
+                
+                # 1. Create and add title page clip
+                title_page_clip = self._create_title_page_clip(video)
+                clips.append(title_page_clip)
+                
+                # Track title page segment
+                video_segments.append({
+                    'video_id': video.get('video_id', ''),
+                    'title': f"Title Page: {video.get('title', '')}",
+                    'start_time': sum(clip.duration for clip in clips[:-1]),
+                    'duration': title_page_clip.duration,
+                    'source_url': video.get('url', '')
+                })
 
                 
                 # Create attribution text
                 attribution_text = self._create_attribution_text(video)
                 
-                # Add attribution overlay
+                # 2. Add attribution overlay to the main video clip
                 clip_with_attribution = self._add_attribution_overlay(
                     video_clip, attribution_text
                 )
                 
                 clips.append(clip_with_attribution)
                 
-                # Track segment information
+                # 3. Track main video segment information
                 video_segments.append({
                     'video_id': video.get('video_id', ''),
                     'title': video.get('title', ''),
@@ -492,6 +505,77 @@ class VideoCompiler:
         self.logger.info(f"Successfully created compilation: {output_filename}")
         return compilation_info
     
+    def _create_title_page_clip(self, video: Dict[str, Any]) -> CompositeVideoClip:
+        """
+        Create a title page clip for a video segment.
+        
+        Args:
+            video (Dict[str, Any]): Video information
+            
+        Returns:
+            CompositeVideoClip: The title page clip
+        """
+        # Title page duration (e.g., 3 seconds)
+        title_duration = 3
+        
+        # Get video details
+        title = video.get('title', 'Unknown Video Title')
+        uploader = video.get('channel_title', 'Unknown Channel')
+        
+        # Try to get upload date from metadata
+        upload_date = 'Unknown Date'
+        metadata_path = video.get('metadata_path', '')
+        if metadata_path and Path(metadata_path).exists():
+            try:
+                with open(metadata_path, 'r', encoding='utf-8') as f:
+                    metadata = json.load(f)
+                    # Use upload_date from yt-dlp info if available
+                    upload_date_str = metadata.get('yt_dlp_info', {}).get('upload_date', '')
+                    if upload_date_str:
+                        upload_date = datetime.strptime(upload_date_str, '%Y%m%d').strftime('%B %d, %Y')
+            except Exception:
+                pass
+        
+        # Create background clip (e.g., black)
+        bg_clip = ColorClip(
+            size=(1280, 720), # Base resolution for text composition
+            color=(0, 0, 0),
+            duration=title_duration
+        )
+        
+        # Text content
+        text_content = (
+            f"Source Video\n\n"
+            f"Title: {title}\n"
+            f"Channel: {uploader}\n"
+            f"Date: {upload_date}"
+        )
+        
+        # Create text clip
+        text_clip = TextClip(
+            txt=text_content,
+            fontsize=40,
+            color='white',
+            font='Arial-Bold',
+            size=(bg_clip.w * 0.8, None), # 80% width
+            method='caption',
+            align='center',
+            duration=title_duration
+        ).with_position('center')
+        
+        # Composite the title page
+        title_page = CompositeVideoClip([bg_clip, text_clip])
+        
+        # Resize to match the compilation resolution
+        if self.video_quality == '1080p':
+            title_page = title_page.resized(height=1080)
+        elif self.video_quality == '480p':
+            title_page = title_page.resized(height=480)
+        else:
+            title_page = title_page.resized(height=720)
+            
+        return title_page
+
     def _create_attribution_text(self, video: Dict[str, Any]) -> str:
         """
         Create attribution text for a video.
@@ -639,22 +723,73 @@ def main():
     compiler = VideoCompiler(config)
     
     # Test with downloaded video (if it exists)
-    test_video_path = Path('downloads/raw_videos/dQw4w9WgXcQ.mp4')
+    test_video_1_path = Path('downloads/raw_videos/test_video_1.mp4')
+    test_video_2_path = Path('downloads/raw_videos/test_video_2.mp4')
     
-    if test_video_path.exists():
+    if test_video_1_path.exists() and test_video_2_path.exists():
         test_videos = [
             {
-                'video_id': 'dQw4w9WgXcQ',
-                'filepath': str(test_video_path),
-                'title': 'Test Video',
-                'uploader': 'Test Channel',
-                'url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-                'metadata_path': 'downloads/metadata/dQw4w9WgXcQ.json'
+                'video_id': 'test_video_1',
+                'filepath': str(test_video_1_path),
+                'title': 'Officer Caught Planting Evidence',
+                'uploader': 'Citizen Watch',
+                'url': 'https://www.youtube.com/watch?v=test1',
+                'metadata_path': 'downloads/metadata/test_video_1.json',
+                'actual_duration': 10.0 # Mock duration for filter
+            },
+            {
+                'video_id': 'test_video_2',
+                'filepath': str(test_video_2_path),
+                'title': 'Unlawful Arrest at Protest',
+                'uploader': 'The Free Press',
+                'url': 'https://www.youtube.com/watch?v=test2',
+                'metadata_path': 'downloads/metadata/test_video_2.json',
+                'actual_duration': 15.0 # Mock duration for filter
             }
         ]
         
         print("Testing video compiler...")
-        results = compiler.compile_videos(test_videos)
+              # Temporarily patch VideoFileClip to return a dummy clip for testing
+        # This is necessary because the dummy files are empty and VideoFileClip will fail
+        original_vfc = VideoFileClip        
+        class MockVideoClip:
+            def __init__(self, filename):
+                self.duration = 5.0 # Mock a short duration
+                self.w = 1280
+                self.h = 720
+            def close(self): pass
+            def with_position(self, pos): return self
+            def with_opacity(self, opacity): return self
+            def with_duration(self, duration): return self
+            def with_fps(self, fps): return self
+            def resized(self, **kwargs): return self
+            def write_videofile(self, *args, **kwargs): pass
+            
+        def mock_video_file_clip(filename):
+            if 'test_video' in filename:
+                return MockVideoClip(filename)
+            return original_vfc(filename)
+            
+        # Temporarily replace the imported name with the mock function
+        VideoFileClip = mock_video_file_clip
+        
+        # Temporarily patch the _filter_valid_videos method to skip the VideoFileClip check
+        # and rely on the mocked 'actual_duration'
+        original_filter = compiler._filter_valid_videos
+        def mock_filter_valid_videos(video_list):
+            valid_videos = []
+            for video in video_list:
+                if Path(video.get('filepath', '')).exists():
+                    valid_videos.append(video)
+            return valid_videos
+        
+        compiler._filter_valid_videos = mock_filter_valid_videos
+        
+        results = compiler.compile_videos(test_videos, categorize=False) # Categorize=False for simple test
+        
+        # Restore original functions
+        VideoFileClip = original_vfc
+        compiler._filter_valid_videos = original_filter
         
         print(f"\nCompilation Results:")
         print(f"Total compilations: {results['stats']['total_compilations']}")
