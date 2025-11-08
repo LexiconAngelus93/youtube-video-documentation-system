@@ -10,5 +10,17 @@ __author__ = "Manus AI"
 __description__ = "YouTube Video Documentation System for Police Misconduct Research"
 
 from .youtube_searcher import YouTubeSearcher
+from .video_downloader import VideoDownloader
+from .content_filter import ContentFilter
+from .video_compiler import VideoCompiler
+from .youtube_uploader import YouTubeUploader
+from .tui import VideoDocTUI
 
-__all__ = ['YouTubeSearcher']
+__all__ = [
+    'YouTubeSearcher',
+    'VideoDownloader',
+    'ContentFilter',
+    'VideoCompiler',
+    'YouTubeUploader',
+    'VideoDocTUI'
+]
