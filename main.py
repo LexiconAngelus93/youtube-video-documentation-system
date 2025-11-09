@@ -25,6 +25,7 @@ from video_downloader import VideoDownloader
 from video_compiler import VideoCompiler
 from content_filter import ContentFilter
 from youtube_uploader import YouTubeUploader
+from tracker import VideoTracker
 
 
 class VideoDocumentationSystem:
@@ -45,11 +46,14 @@ class VideoDocumentationSystem:
         
         self.logger = logging.getLogger(__name__)
         
+        # Initialize the tracker first
+        self.tracker = VideoTracker(self.config)
+        
         # Initialize components
         self.searcher = YouTubeSearcher(self.config)
         self.downloader = VideoDownloader(self.config)
-        self.compiler = VideoCompiler(self.config)
         self.content_filter = ContentFilter(self.config)
+        self.compiler = VideoCompiler(self.config)
         self.uploader = YouTubeUploader(self.config)
         
         # Session tracking

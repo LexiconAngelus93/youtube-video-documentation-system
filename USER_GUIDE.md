@@ -93,7 +93,16 @@ categorization:
 
 ## Usage
 
-### 3.1 Terminal User Interface (TUI)
+### 3.1 Preventing Duplicate Downloads (Persistent Tracking)
+
+The system now includes a **Persistent Tracking** feature to ensure that any video used in a compilation is never downloaded or used again.
+
+- **How it Works:** Upon successful compilation, the system records the video ID in a file named `used_videos.json` (located in the project root).
+- **Effect:** In all future search runs, videos whose IDs are found in this file will be automatically filtered out of the search results, preventing them from being downloaded or compiled again.
+
+**Best Practice:** Do not delete the `used_videos.json` file if you want to maintain a history of used videos. If you wish to reset the history and allow all videos to be searched again, simply delete the `used_videos.json` file.
+
+### 3.2 Terminal User Interface (TUI)
 
 The TUI provides an interactive, real-time view of the pipeline execution and allows for easy configuration management.
 
@@ -106,7 +115,7 @@ From the TUI main menu, you can:
 - **Configure Settings (C):** Adjust key parameters like `max-videos` and `privacy-status` without editing `config.yaml` directly.
 - **Run Pipeline (R):** Start the full search -> download -> compile -> upload process and view the real-time log output.
 
-### 3.2 Command Line Interface (CLI)
+### 3.3 Command Line Interface (CLI)
 
 The CLI remains available for users who prefer scripting or running specific parts of the pipeline. If any arguments are provided to `main.py`, the TUI will be bypassed, and the CLI mode will execute.
 
@@ -173,6 +182,7 @@ video_documentation_system/
 - Validates downloaded files
 
 ### 4. Video Compilation Phase
+- **Title Pages:** Automatically inserts a title page before each video segment with source attribution.
 - Groups videos by category and duration targets
 - Creates compilation videos with source attribution
 - Adds text overlays with video source information

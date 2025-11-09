@@ -21,6 +21,8 @@ from moviepy import (
     concatenate_videoclips, ColorClip, config
 )
 
+from .tracker import VideoTracker
+
 
 class VideoCompiler:
     """
@@ -52,6 +54,9 @@ class VideoCompiler:
         
         # Create output directory
         Path(self.output_dir).mkdir(parents=True, exist_ok=True)
+        
+        # Initialize the video tracker
+        self.tracker = VideoTracker(config)
         
         # Compilation tracking
         self.compiled_videos = []
@@ -128,6 +133,9 @@ class VideoCompiler:
         
         results = self._get_compilation_results()
         self.logger.info(f"Compilation completed: {results['stats']['total_compilations']} compilations created")
+        
+        # Mark all videos used in successful compilations as used
+        self.tracker.mark_compilation_videos_as_used(results)
         
         return results
     

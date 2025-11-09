@@ -15,6 +15,7 @@ from .content_filter import ContentFilter
 from .video_compiler import VideoCompiler
 from .youtube_uploader import YouTubeUploader
 from .tui import VideoDocTUI
+from .tracker import VideoTracker
 
 __all__ = [
     'YouTubeSearcher',
@@ -22,5 +23,6 @@ __all__ = [
     'ContentFilter',
     'VideoCompiler',
     'YouTubeUploader',
-    'VideoDocTUI'
+    'VideoDocTUI',
+    'VideoTracker'
 ]
