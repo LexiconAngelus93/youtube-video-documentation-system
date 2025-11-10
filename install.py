@@ -84,17 +84,21 @@ def download_project():
     return True
 
 def install_dependencies():
-    """Install Python dependencies"""
+    """    # Install dependencies
     print("📦 Installing Python dependencies...")
     
     try:
         subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], 
                       check=True)
         print("✅ Dependencies installed")
+        
+        print("\nNote: The YouTube Uploader requires the user to manually complete the OAuth 2.0 flow")
+        print("to generate the 'youtube_credentials.json' file. See USER_GUIDE.md for details.")
+        
         return True
     except subprocess.CalledProcessError as e:
         print(f"❌ Failed to install dependencies: {e}")
-        return False
+        return Falsealse
 
 def create_directories():
     """Create necessary project directories"""

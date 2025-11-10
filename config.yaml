@@ -61,6 +61,17 @@ compilation_settings:
   attribution_duration: 5      # Seconds to show source attribution
   attribution_position: "bottom"  # Position of attribution text
   
+# YouTube Upload Settings
+youtube_upload:
+  client_secrets_file: client_secrets.json # Downloaded from Google Dev Console
+  credentials_file: youtube_credentials.json # Generated after first OAuth flow
+  privacy_status: unlisted # Options: public, unlisted, private
+
+# LLM Content Generation Settings
+llm_settings:
+  model: gpt-4.1-mini # Model for generating titles and descriptions
+  api_key_env: OPENAI_API_KEY # Environment variable for API key
+
 # Categorization settings
 categorization:
   categories:

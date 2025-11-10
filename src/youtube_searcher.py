@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 import time
 
 # Add the Manus API client path
+from .tracker import VideoTracker
 sys.path.append('/opt/.manus/.sandbox-runtime')
 from data_api import ApiClient
 
@@ -47,6 +48,9 @@ class YouTubeSearcher:
         # Results storage
         self.found_videos = []
         self.processed_video_ids = set()
+        
+        # Initialize the video tracker
+        self.tracker = VideoTracker(config)
         
     def search_videos(self, max_results: int = 1000) -> List[Dict[str, Any]]:
         """
@@ -82,6 +86,9 @@ class YouTubeSearcher:
         
         # Filter by region/content
         final_videos = self._filter_by_region(filtered_videos)
+        
+        # Filter out already used videos
+        final_videos = self._filter_used_videos(final_videos)
         
         self.found_videos = final_videos
         self.logger.info(f"Total unique videos found: {len(final_videos)}")
@@ -345,6 +352,20 @@ class YouTubeSearcher:
                 filtered_videos.append(video)
         
         self.logger.info(f"Filtered {len(videos) - len(filtered_videos)} videos without US indicators")
+        return filtered_videos
+    
+    def _filter_used_videos(self, videos: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Filters out videos that have already been used in a compilation.
+        """
+        used_ids = self.tracker.get_used_ids()
+        if not used_ids:
+            return videos
+            
+        initial_count = len(videos)
+        filtered_videos = [v for v in videos if v.get('video_id') not in used_ids]
+        
+        self.logger.info(f"Filtered out {initial_count - len(filtered_videos)} videos already used in compilations.")
         return filtered_videos
     
     def save_results(self, filename: str) -> None:

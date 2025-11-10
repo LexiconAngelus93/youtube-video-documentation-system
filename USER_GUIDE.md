@@ -93,35 +93,45 @@ categorization:
 
 ## Usage
 
-### Command Line Interface
+### 3.1 Preventing Duplicate Downloads (Persistent Tracking)
 
-The system provides several operation modes:
+The system now includes a **Persistent Tracking** feature to ensure that any video used in a compilation is never downloaded or used again.
 
-#### Full Pipeline
-Runs the complete process from search to compilation:
+- **How it Works:** Upon successful compilation, the system records the video ID in a file named `used_videos.json` (located in the project root).
+- **Effect:** In all future search runs, videos whose IDs are found in this file will be automatically filtered out of the search results, preventing them from being downloaded or compiled again.
+
+**Best Practice:** Do not delete the `used_videos.json` file if you want to maintain a history of used videos. If you wish to reset the history and allow all videos to be searched again, simply delete the `used_videos.json` file.
+
+### 3.2 Terminal User Interface (TUI)
+
+The TUI provides an interactive, real-time view of the pipeline execution and allows for easy configuration management.
+
+**To launch the TUI:**
 ```bash
-python3 main.py --max-videos 50
+python3 main.py
 ```
 
-#### Search Only
-Performs only the video search phase:
-```bash
-python3 main.py --mode search --max-videos 100
-```
+From the TUI main menu, you can:
+- **Configure Settings (C):** Adjust key parameters like `max-videos` and `privacy-status` without editing `config.yaml` directly.
+- **Run Pipeline (R):** Start the full search -> download -> compile -> upload process and view the real-time log output.
 
-#### Download from File
-Downloads videos from a saved search results file:
-```bash
-python3 main.py --mode download --input-file search_results.json
-```
+### 3.3 Command Line Interface (CLI)
 
-#### Compile Existing Downloads
-Creates compilations from already downloaded videos:
-```bash
-python3 main.py --mode compile --downloads-dir downloads/
-```
+The CLI remains available for users who prefer scripting or running specific parts of the pipeline. If any arguments are provided to `main.py`, the TUI will be bypassed, and the CLI mode will execute.
 
-### Command Line Options
+#### Operation Modes
+
+The primary way to control the system is through the `--mode` argument.
+
+| Mode | Description | Command Example |
+| :--- | :--- | :--- |
+| `full` | Runs the entire pipeline: Search -> Filter -> Download -> Compile -> Upload. (Default) | `python3 main.py --max-videos 20` |
+| `search` | Runs only the search and filtering phases. | `python3 main.py --mode search --max-videos 50` |
+| `download` | Downloads videos from a previously saved search results file. | `python3 main.py --mode download --input-file sessions/20231027_153000/search_results.json` |
+| `compile` | Creates compilations from existing downloaded videos. | `python3 main.py --mode compile` |
+| `upload` | Uploads compiled videos to YouTube (requires prior compilation). | `python3 main.py --mode upload` |
+
+#### Command Line Options
 
 - `--config, -c`: Configuration file path (default: config.yaml)
 - `--mode, -m`: Operation mode (full, search, download, compile)
@@ -172,6 +182,7 @@ video_documentation_system/
 - Validates downloaded files
 
 ### 4. Video Compilation Phase
+- **Title Pages:** Automatically inserts a title page before each video segment with source attribution.
 - Groups videos by category and duration targets
 - Creates compilation videos with source attribution
 - Adds text overlays with video source information

@@ -24,6 +24,8 @@ from youtube_searcher import YouTubeSearcher
 from video_downloader import VideoDownloader
 from video_compiler import VideoCompiler
 from content_filter import ContentFilter
+from youtube_uploader import YouTubeUploader
+from tracker import VideoTracker
 
 
 class VideoDocumentationSystem:
@@ -44,11 +46,15 @@ class VideoDocumentationSystem:
         
         self.logger = logging.getLogger(__name__)
         
+        # Initialize the tracker first
+        self.tracker = VideoTracker(self.config)
+        
         # Initialize components
         self.searcher = YouTubeSearcher(self.config)
         self.downloader = VideoDownloader(self.config)
-        self.compiler = VideoCompiler(self.config)
         self.content_filter = ContentFilter(self.config)
+        self.compiler = VideoCompiler(self.config)
+        self.uploader = YouTubeUploader(self.config)
         
         # Session tracking
         self.session_id = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -112,6 +118,7 @@ class VideoDocumentationSystem:
             'download_results': {},
             'filter_results': {},
             'compilation_results': {},
+            'upload_results': {},
             'errors': []
         }
         
@@ -193,6 +200,15 @@ class VideoDocumentationSystem:
             # Save compilation report
             compilation_report_file = self.session_dir / 'compilation_report.json'
             self.compiler.save_compilation_report(str(compilation_report_file))
+
+            # Step 6: Upload compilations
+            self.logger.info("Step 6: Uploading compilations to YouTube")
+            compilations_to_upload = compilation_results.get("compilations", [])
+            upload_results_list = []
+            for comp in compilations_to_upload:
+                upload_result = self.uploader.upload_video(comp)
+                upload_results_list.append(upload_result)
+            results['upload_results'] = upload_results_list
             
             results['end_time'] = datetime.now().isoformat()
             results['success'] = True
@@ -312,6 +328,37 @@ class VideoDocumentationSystem:
         except Exception as e:
             self.logger.error(f"Error creating compilations: {str(e)}")
             return {}
+
+    def upload_from_file(self, compilation_report_file: str) -> None:
+        """
+        Upload compilations from a saved compilation report file.
+
+        Args:
+            compilation_report_file (str): Path to compilation report JSON file
+        """
+        self.logger.info(f"Uploading from file: {compilation_report_file}")
+
+        try:
+            with open(compilation_report_file, "r", encoding="utf-8") as f:
+                compilations = json.load(f).get("compilations", [])
+
+            if not compilations:
+                self.logger.warning("No compilations found in the report file.")
+                return
+
+            upload_results = []
+            for compilation in compilations:
+                self.logger.info(f"Uploading compilation: {compilation.get('name')}")
+                upload_result = self.uploader.upload_video(compilation)
+                upload_results.append(upload_result)
+
+            # Save upload report
+            upload_report_file = self.session_dir / "upload_from_file_report.json"
+            with open(upload_report_file, "w", encoding="utf-8") as f:
+                json.dump(upload_results, f, indent=2, ensure_ascii=False)
+
+        except Exception as e:
+            self.logger.error(f"Error uploading from file: {str(e)}")
     
     def get_session_summary(self) -> Dict[str, Any]:
         """
@@ -342,93 +389,107 @@ def main():
     """
     Main entry point for the application.
     """
-    parser = argparse.ArgumentParser(
-        description='YouTube Video Documentation System for Police Misconduct Research'
-    )
-    
-    parser.add_argument(
-        '--config', '-c',
-        default='config.yaml',
-        help='Configuration file path (default: config.yaml)'
-    )
-    
-    parser.add_argument(
-        '--mode', '-m',
-        choices=['full', 'search', 'download', 'compile'],
-        default='full',
-        help='Operation mode (default: full)'
-    )
-    
-    parser.add_argument(
-        '--max-videos', '-n',
-        type=int,
-        help='Maximum number of videos to process'
-    )
-    
-    parser.add_argument(
-        '--input-file', '-i',
-        help='Input file for download or compile modes'
-    )
-    
-    parser.add_argument(
-        '--downloads-dir', '-d',
-        help='Downloads directory for compile mode'
-    )
-    
-    args = parser.parse_args()
-    
-    try:
-        # Initialize system
-        system = VideoDocumentationSystem(args.config)
+    if len(sys.argv) > 1:
+        parser = argparse.ArgumentParser(
+            description='YouTube Video Documentation System for Police Misconduct Research'
+        )
         
-        # Run based on mode
-        if args.mode == 'full':
-            print("Running full pipeline...")
-            results = system.run_full_pipeline(max_videos=args.max_videos)
+        parser.add_argument(
+            '--config', '-c',
+            default='config.yaml',
+            help='Configuration file path (default: config.yaml)'
+        )
+        
+        parser.add_argument(
+            '--mode', '-m',
+            choices=["full", "search", "download", "compile", "upload"],
+            default='full',
+            help='Operation mode (default: full)'
+        )
+        
+        parser.add_argument(
+            '--max-videos', '-n',
+            type=int,
+            help='Maximum number of videos to process'
+        )
+        
+        parser.add_argument(
+            '--input-file', '-i',
+            help='Input file for download or compile modes'
+        )
+        
+        parser.add_argument(
+            '--downloads-dir', '-d',
+            help='Downloads directory for compile mode'
+        )
+        
+        args = parser.parse_args()
+        
+        try:
+            # Initialize system
+            system = VideoDocumentationSystem(args.config)
             
-            if results.get('success'):
-                print(f"\nPipeline completed successfully!")
-                print(f"Session ID: {results['session_id']}")
-                print(f"Videos found: {results['search_results'].get('total_found', 0)}")
-                print(f"Videos downloaded: {results['download_results'].get('stats', {}).get('successful', 0)}")
-                print(f"Compilations created: {results['compilation_results'].get('stats', {}).get('total_compilations', 0)}")
-            else:
-                print(f"\nPipeline failed. Check logs for details.")
-                if results.get('errors'):
-                    print(f"Errors: {results['errors']}")
-        
-        elif args.mode == 'search':
-            print("Running search only...")
-            videos = system.search_only(max_results=args.max_videos)
-            print(f"Found {len(videos)} videos")
-        
-        elif args.mode == 'download':
-            if not args.input_file:
-                print("Error: --input-file required for download mode")
-                sys.exit(1)
+            # Run based on mode
+            if args.mode == 'full':
+                print("Running full pipeline...")
+                results = system.run_full_pipeline(max_videos=args.max_videos)
+                
+                if results.get('success'):
+                    print(f"\nPipeline completed successfully!")
+                    print(f"Session ID: {results['session_id']}")
+                    print(f"Videos found: {results['search_results'].get('total_found', 0)}")
+                    print(f"Videos downloaded: {results['download_results'].get('stats', {}).get('successful', 0)}")
+                    print(f"Compilations created: {results['compilation_results'].get('stats', {}).get('total_compilations', 0)}")
+                    print(f"Uploads: {len(results.get('upload_results', []))}")
+                else:
+                    print(f"\nPipeline failed. Check logs for details.")
+                    if results.get('errors'):
+                        print(f"Errors: {results['errors']}")
             
-            print(f"Downloading from file: {args.input_file}")
-            results = system.download_from_file(args.input_file)
-            print(f"Downloaded {results.get('stats', {}).get('successful', 0)} videos")
-        
-        elif args.mode == 'compile':
-            print("Creating compilations from downloads...")
-            results = system.compile_from_downloads(downloads_dir=args.downloads_dir)
-            print(f"Created {results.get('stats', {}).get('total_compilations', 0)} compilations")
-        
-        # Show session summary
-        summary = system.get_session_summary()
-        print(f"\nSession Summary:")
-        print(f"Session ID: {summary['session_id']}")
-        print(f"Session directory: {summary['session_dir']}")
-        print(f"Files created: {len(summary['files_created'])}")
-        
-    except KeyboardInterrupt:
-        print("\nOperation cancelled by user")
-        sys.exit(1)
-    except Exception as e:
-        print(f"Error: {str(e)}")
-        sys.exit(1)
+            elif args.mode == 'search':
+                print("Running search only...")
+                videos = system.search_only(max_results=args.max_videos)
+                print(f"Found {len(videos)} videos")
+            
+            elif args.mode == 'download':
+                if not args.input_file:
+                    print("Error: --input-file required for download mode")
+                    sys.exit(1)
+                
+                print(f"Downloading from file: {args.input_file}")
+                results = system.download_from_file(args.input_file)
+                print(f"Downloaded {results.get('stats', {}).get('successful', 0)} videos")
+            
+            elif args.mode == 'compile':
+                print("Creating compilations from downloads...")
+                results = system.compile_from_downloads(downloads_dir=args.downloads_dir)
+                print(f"Created {results.get('stats', {}).get('total_compilations', 0)} compilations")
+
+            elif args.mode == 'upload':
+                if not args.input_file:
+                    print("Error: --input-file required for upload mode (e.g., a compilation_report.json)")
+                    sys.exit(1)
+                print(f"Uploading from file: {args.input_file}")
+                system.upload_from_file(args.input_file)
+            
+            # Show session summary
+            summary = system.get_session_summary()
+            print(f"\nSession Summary:")
+            print(f"Session ID: {summary['session_id']}")
+            print(f"Session directory: {summary['session_dir']}")
+            print(f"Files created: {len(summary['files_created'])}")
+            
+        except KeyboardInterrupt:
+            print("\nOperation cancelled by user")
+            sys.exit(1)
+        except Exception as e:
+            print(f"Error: {str(e)}")
+            sys.exit(1)
+    else:
+        # Launch the TUI if no arguments are provided
+        from src.tui import VideoDocTUI
+        app = VideoDocTUI()
+        app.run()
 
 
 if __name__ == "__main__":

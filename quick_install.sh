@@ -74,6 +74,9 @@ echo "✅ Project files downloaded"
 echo "📦 Installing Python dependencies..."
 pip3 install -r requirements.txt
 
+# Note: The YouTube Uploader requires the user to manually complete the OAuth 2.0 flow
+# to generate the 'youtube_credentials.json' file. See USER_GUIDE.md for details.
+
 echo "✅ Dependencies installed"
 
 # Create necessary directories
