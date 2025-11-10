@@ -388,6 +388,39 @@ class VideoCompiler:
         
         return groups
     
+    def _make_segment(self, video: Dict[str, Any], clip, title_prefix: str = "") -> Dict[str, Any]:
+        """Return the segment dict for a clip."""
+        start = sum(c.duration for c in self._current_clips)
+        title = f"{title_prefix}{video.get('title','')}"
+        return {
+            'video_id': video.get('video_id',''),
+            'title': title,
+            'start_time': start,
+            'duration': clip.duration,
+            'source_url': video.get('url','')
+        }
+
+    def _compile_video_segments(self, video: Dict[str, Any]) -> Tuple[List[VideoClip], List[Dict]]:
+        """Build title-page + main clips and their segment entries for one video."""
+        clips: List[VideoClip] = []
+        segments: List[Dict] = []
+
+        # keep a reference for start_time calcs
+        self._current_clips = clips
+
+        # 1) title page
+        title_clip = self._create_title_page_clip(video)
+        clips.append(title_clip)
+        segments.append(self._make_segment(video, title_clip, title_prefix="Title Page: "))
+
+        # 2) main video + attribution
+        raw = VideoFileClip(video["filepath"])
+        clip_with_attr = self._add_attribution_overlay(raw, self._create_attribution_text(video))
+        clips.append(clip_with_attr)
+        segments.append(self._make_segment(video, clip_with_attr))
+
+        return clips, segments
+
     def _create_single_compilation(self, name: str, videos: List[Dict[str, Any]], 
                                  category: str) -> Dict[str, Any]:
         """
@@ -406,46 +439,12 @@ class VideoCompiler:
         clips = []
         video_segments = []
         
-        for i, video in enumerate(videos):
+        for video in videos:
             try:
-                # Load video clip
-                video_clip = VideoFileClip(video["filepath"])
-                
-                # 1. Create and add title page clip
-                title_page_clip = self._create_title_page_clip(video)
-                clips.append(title_page_clip)
-                
-                # Track title page segment
-                video_segments.append({
-                    'video_id': video.get('video_id', ''),
-                    'title': f"Title Page: {video.get('title', '')}",
-                    'start_time': sum(clip.duration for clip in clips[:-1]),
-                    'duration': title_page_clip.duration,
-                    'source_url': video.get('url', '')
-                })
-
-                
-                # Create attribution text
-                attribution_text = self._create_attribution_text(video)
-                
-                # 2. Add attribution overlay to the main video clip
-                clip_with_attribution = self._add_attribution_overlay(
-                    video_clip, attribution_text
-                )
-                
-                clips.append(clip_with_attribution)
-                
-                # 3. Track main video segment information
-                video_segments.append({
-                    'video_id': video.get('video_id', ''),
-                    'title': video.get('title', ''),
-                    'start_time': sum(clip.duration for clip in clips[:-1]),
-                    'duration': clip_with_attribution.duration,
-                    'source_url': video.get('url', '')
-                })
-                
-                self.logger.debug(f"Added video {i+1}/{len(videos)} to compilation")
-                
+                new_clips, new_segs = self._compile_video_segments(video)
+                clips.extend(new_clips)
+                video_segments.extend(new_segs)
+                self.logger.debug(f"Added {len(new_clips)} clips for video {video['video_id']}")
             except Exception as e:
                 self.logger.error(f"Error processing video {video.get('video_id', 'unknown')}: {str(e)}")
                 continue
@@ -538,8 +537,7 @@ class VideoCompiler:
                 with open(metadata_path, 'r', encoding='utf-8') as f:
                     metadata = json.load(f)
                     # Use upload_date from yt-dlp info if available
-                    upload_date_str = metadata.get('yt_dlp_info', {}).get('upload_date', '')
-                    if upload_date_str:
+                    if (upload_date_str := metadata.get('yt_dlp_info', {}).get('upload_date', '')):
                         upload_date = datetime.strptime(upload_date_str, '%Y%m%d').strftime('%B %d, %Y')
             except Exception:
                 pass
@@ -696,117 +694,3 @@ class VideoCompiler:
             self.logger.error(f"Error saving compilation report: {str(e)}")
 
 
-def main():
-    """
-    Test function for the video compiler.
-    """
-    # Basic configuration for testing
-    config = {
-        'compilation_settings': {
-            'output_dir': 'compilations',
-            'target_duration_minutes': 2,  # Short for testing
-            'max_duration_minutes': 3,
-            'min_duration_minutes': 1,
-            'video_quality': '720p',
-            'attribution_duration': 3,
-            'attribution_position': 'bottom'
-        },
-        'categorization': {
-            'categories': {
-                'test_category': {
-                    'keywords': ['test', 'video'],
-                    'priority': 1
-                }
-            }
-        }
-    }
-    
-    # Set up logging
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-    
-    # Create compiler
-    compiler = VideoCompiler(config)
-    
-    # Test with downloaded video (if it exists)
-    test_video_1_path = Path('downloads/raw_videos/test_video_1.mp4')
-    test_video_2_path = Path('downloads/raw_videos/test_video_2.mp4')
-    
-    if test_video_1_path.exists() and test_video_2_path.exists():
-        test_videos = [
-            {
-                'video_id': 'test_video_1',
-                'filepath': str(test_video_1_path),
-                'title': 'Officer Caught Planting Evidence',
-                'uploader': 'Citizen Watch',
-                'url': 'https://www.youtube.com/watch?v=test1',
-                'metadata_path': 'downloads/metadata/test_video_1.json',
-                'actual_duration': 10.0 # Mock duration for filter
-            },
-            {
-                'video_id': 'test_video_2',
-                'filepath': str(test_video_2_path),
-                'title': 'Unlawful Arrest at Protest',
-                'uploader': 'The Free Press',
-                'url': 'https://www.youtube.com/watch?v=test2',
-                'metadata_path': 'downloads/metadata/test_video_2.json',
-                'actual_duration': 15.0 # Mock duration for filter
-            }
-        ]
-        
-        print("Testing video compiler...")
-              # Temporarily patch VideoFileClip to return a dummy clip for testing
-        # This is necessary because the dummy files are empty and VideoFileClip will fail
-        original_vfc = VideoFileClip        
-        class MockVideoClip:
-            def __init__(self, filename):
-                self.duration = 5.0 # Mock a short duration
-                self.w = 1280
-                self.h = 720
-            def close(self): pass
-            def with_position(self, pos): return self
-            def with_opacity(self, opacity): return self
-            def with_duration(self, duration): return self
-            def with_fps(self, fps): return self
-            def resized(self, **kwargs): return self
-            def write_videofile(self, *args, **kwargs): pass
-            
-        def mock_video_file_clip(filename):
-            if 'test_video' in filename:
-                return MockVideoClip(filename)
-            return original_vfc(filename)
-            
-        # Temporarily replace the imported name with the mock function
-        VideoFileClip = mock_video_file_clip
-        
-        # Temporarily patch the _filter_valid_videos method to skip the VideoFileClip check
-        # and rely on the mocked 'actual_duration'
-        original_filter = compiler._filter_valid_videos
-        def mock_filter_valid_videos(video_list):
-            valid_videos = []
-            for video in video_list:
-                if Path(video.get('filepath', '')).exists():
-                    valid_videos.append(video)
-            return valid_videos
-        
-        compiler._filter_valid_videos = mock_filter_valid_videos
-        
-        results = compiler.compile_videos(test_videos, categorize=False) # Categorize=False for simple test
-        
-        # Restore original functions
-        VideoFileClip = original_vfc
-        compiler._filter_valid_videos = original_filter
-        
-        print(f"\nCompilation Results:")
-        print(f"Total compilations: {results['stats']['total_compilations']}")
-        print(f"Total source videos: {results['stats']['total_source_videos']}")
-        print(f"Total size: {results['total_size_mb']:.2f} MB")
-        
-    else:
-        print("No test video found. Please run the downloader first.")
-
-
-if __name__ == "__main__":
-    main()
