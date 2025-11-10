@@ -157,13 +157,13 @@ class RunScreen(Screen):
     def action_switch_screen(self, screen_name: str) -> None:
         self.app.switch_screen(screen_name)
 
-        def action_run_pipeline(self) -> None:
-        self.logger.info("Starting full pipeline execution...")
-        if self.app.system:
-            # The core system's run_full_pipeline is blocking, so we need to run it in a worker thread
-            # to keep the TUI responsive.
-            self.run_worker(self.app.system.run_full_pipeline(), exclusive=True)
-            self.logger.info("Pipeline execution started in background.")
+    def action_run_pipeline(self) -> None:
+    self.logger.info("Starting full pipeline execution...")
+    if self.app.system:
+        # The core system's run_full_pipeline is blocking, so we need to run it in a worker thread
+        # to keep the TUI responsive.
+        self.run_worker(self.app.system.run_full_pipeline(), exclusive=True)
+        self.logger.info("Pipeline execution started in background.")
         else:
             self.logger.error("Core system not initialized. Please check config.yaml.")
 
@@ -185,7 +185,7 @@ class VideoDocTUI(App):
         except Exception as e:
             self.title = "VideoDocTUI - ERROR"
             self.log(f"Error initializing core system: {e}")
-     CSS_PATH = "tui_styles.css"ss"
+     CSS_PATH = "tui_styles.css"
     SCREENS = {
         "main": MainScreen,
         "config": ConfigScreen,
