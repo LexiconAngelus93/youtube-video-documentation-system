@@ -444,7 +444,7 @@ class VideoCompiler:
                 new_clips, new_segs = self._compile_video_segments(video)
                 clips.extend(new_clips)
                 video_segments.extend(new_segs)
-                self.logger.debug(f"Added {len(new_clips)} clips for video {video['video_id']}")
+                self.logger.debug(f"Added {len(new_clips)} clips for video {video.get('video_id', 'unknown')}")
             except Exception as e:
                 self.logger.error(f"Error processing video {video.get('video_id', 'unknown')}: {str(e)}")
                 continue

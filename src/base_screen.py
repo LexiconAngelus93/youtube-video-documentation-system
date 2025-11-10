@@ -16,8 +16,7 @@ class BaseScreen(Screen):
         """Compose the screen with header, footer, and body content."""
         yield Header()
         yield Footer()
-        for child in self.body():
-            yield child
+        yield from self.body()
 
     def body(self) -> ComposeResult:
         """

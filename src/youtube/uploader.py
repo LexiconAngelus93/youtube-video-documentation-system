@@ -102,6 +102,41 @@ class YouTubeUploader:
             }
         }
 
+
+    def _build_success_response(self, response: Dict[str, Any], body: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Build success response dictionary.
+        
+        Args:
+            response: YouTube API response
+            body: Video metadata
+            
+        Returns:
+            Success response dictionary
+        """
+        return {
+            "status": "success",
+            "video_id": response['id'],
+            "url": f"https://youtu.be/{response['id']}",
+            "title": body['snippet']['title'],
+            "description": body['snippet']['description']
+        }
+
+    def _build_error_response(self, error: Exception, error_type: str = "Unexpected") -> Dict[str, Any]:
+        """
+        Build error response dictionary.
+        
+        Args:
+            error: Exception that occurred
+            error_type: Type of error (HTTP or Unexpected)
+            
+        Returns:
+            Error response dictionary
+        """
+        if error_type == "HTTP":
+            return {"status": "failed", "reason": f"HTTP Error: {error.resp.status}"}
+        return {"status": "failed", "reason": f"Unexpected Error: {error}"}
+
     def _execute_upload(self, body: Dict[str, Any], filepath: str) -> Dict[str, Any]:
         """
         Execute the actual upload to YouTube.
@@ -128,20 +163,14 @@ class YouTubeUploader:
             response = insert_request.execute()
 
             self.logger.info(f"Upload successful. Video ID: {response['id']}")
-            return {
-                "status": "success",
-                "video_id": response['id'],
-                "url": f"https://youtu.be/{response['id']}",
-                "title": body['snippet']['title'],
-                "description": body['snippet']['description']
-            }
+            return self._build_success_response(response, body)
 
         except HttpError as e:
             self.logger.error(f"An HTTP error {e.resp.status} occurred: {e.content}")
-            return {"status": "failed", "reason": f"HTTP Error: {e.resp.status}"}
+            return self._build_error_response(e, "HTTP")
         except Exception as e:
             self.logger.error(f"An unexpected error occurred during upload: {e}")
-            return {"status": "failed", "reason": f"Unexpected Error: {e}"}
+            return self._build_error_response(e)
 
     def upload_video(self, compilation_info: Dict[str, Any]) -> Dict[str, Any]:
         """

@@ -6,12 +6,12 @@ This module handles OAuth2 authentication for YouTube API access.
 """
 
 import os
-from google_auth_oauthlib.flow import InstalledAppFlow
+import logging
+from typing import List, Optional
+
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from google.oauth2.credentials import Credentials
-import logging
-from typing import List
 
 class OAuth2Authenticator:
     """Handles OAuth2 authentication for YouTube API."""
@@ -30,59 +30,48 @@ class OAuth2Authenticator:
         self.scopes = scopes
         self.logger = logging.getLogger(__name__)
 
-    def get_service(self, api_name: str, api_version: str):
+    def get_service(self, api_name: str, api_version: str) -> Optional[object]:
         """
         Get authenticated YouTube service.
+        
+        This method attempts to load existing credentials and refresh them if needed.
+        It does not handle interactive OAuth flows - credentials must be generated
+        separately and placed in the credentials file.
         
         Args:
             api_name: API service name
             api_version: API version
             
         Returns:
-            Authenticated service object or None
+            Authenticated service object or None if authentication fails
         """
         creds = None
+        
+        # 1) Try loading existing credentials
         if os.path.exists(self.credentials_file):
             try:
                 creds = Credentials.from_authorized_user_file(self.credentials_file, self.scopes)
             except Exception as e:
-                self.logger.warning(f"Could not load credentials: {e}. Starting fresh flow.")
+                self.logger.warning(f"Couldn't load credentials ({e}), will fail fast")
+
+        # 2) Attempt a silent refresh if expired
+        if creds and creds.expired and creds.refresh_token:
+            try:
+                creds.refresh(Request())
+            except Exception as e:
+                self.logger.warning(f"Failed to refresh credentials ({e})")
                 creds = None
 
-        # If no valid credentials, initiate the flow
+        # 3) If still no valid creds, fail fast
         if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                self.logger.info("Refreshing expired credentials...")
-                creds.refresh(Request())
-            else:
-                self.logger.info("Starting new OAuth 2.0 flow. User interaction required.")
+            self.logger.error(
+                f"No valid credentials found. "
+                f"Please run the OAuth flow locally to generate {self.credentials_file}"
+            )
+            return None
 
-                # Check for client secrets file
-                if not os.path.exists(self.client_secrets_file):
-                    self.logger.error(f"Client secrets file not found at: {self.client_secrets_file}")
-                    self.logger.error("Please download 'client_secrets.json' from Google Developer Console and place it in the project root.")
-                    return None
+        # 4) Persist refreshed creds and build service
+        with open(self.credentials_file, "w") as token:
+            token.write(creds.to_json())
 
-                flow = InstalledAppFlow.from_client_secrets_file(self.client_secrets_file, self.scopes)
-
-                # This part requires user interaction (opening a browser, logging in, copying a code)
-                # Since we are in a sandbox, we must ask the user to perform this step.
-                self.logger.info("Please complete the OAuth flow in your browser.")
-
-                # We will skip the interactive part for now and assume the user will handle it
-                # or that the credentials file will be provided.
-                # The user must manually run the OAuth flow and provide the credentials file.
-
-                # Since we cannot perform the interactive OAuth flow, we will inform the user
-                # and proceed with a placeholder service object.
-                self.logger.warning("Automatic OAuth flow is not possible in this environment. Please ensure 'youtube_credentials.json' is present.")
-                return None # The actual upload will fail without valid credentials
-
-        # Save the credentials for the next run
-        if creds and creds.valid:
-            with open(self.credentials_file, 'w') as token:
-                token.write(creds.to_json())
-
-            return build(api_name, api_version, credentials=creds)
-
-        return None
+        return build(api_name, api_version, credentials=creds)

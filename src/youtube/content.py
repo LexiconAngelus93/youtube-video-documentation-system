@@ -68,11 +68,24 @@ class ContentGenerator:
                 response_format={"type": "json_object"}
             )
             
-            return json.loads(resp.choices[0].message.content)
+            # Validate and parse LLM response
+            try:
+                result = json.loads(resp.choices[0].message.content)
+                # Validate required fields
+                if not isinstance(result, dict) or 'title' not in result or 'description' not in result:
+                    raise ValueError("LLM response missing required fields")
+                return result
+            except (json.JSONDecodeError, ValueError) as e:
+                # Log the error and fall through to fallback
+                raise Exception(f"Invalid LLM response format: {e}")
             
         except Exception as e:
             # Fallback content if LLM fails
             return {
                 "title": f"Police Misconduct Compilation - {compilation_info.get('name', 'Document')}",
-                "description": f"This video documents {compilation_info.get('video_count', 0)} incidents of police misconduct. "                                f"Content is compiled for research and accountability purposes. For more information, "                                f"please refer to the individual source videos included in this compilation."
+                "description": (
+                    f"This video documents {compilation_info.get('video_count', 0)} incidents of police misconduct. "
+                    f"Content is compiled for research and accountability purposes. For more information, "
+                    f"please refer to the individual source videos included in this compilation."
+                )
             }
