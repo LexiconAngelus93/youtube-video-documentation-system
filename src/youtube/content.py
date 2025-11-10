@@ -74,7 +74,5 @@ class ContentGenerator:
             # Fallback content if LLM fails
             return {
                 "title": f"Police Misconduct Compilation - {compilation_info.get('name', 'Document')}",
-                "description": f"This video documents {compilation_info.get('video_count', 0)} incidents of police misconduct. 
-                Content is compiled for research and accountability purposes. For more information, 
-                please refer to the individual source videos included in this compilation."
+                "description": f"This video documents {compilation_info.get('video_count', 0)} incidents of police misconduct. "                                f"Content is compiled for research and accountability purposes. For more information, "                                f"please refer to the individual source videos included in this compilation."
             }
