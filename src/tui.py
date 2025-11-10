@@ -100,7 +100,7 @@ class ConfigScreen(Screen):
     def action_switch_screen(self, screen_name: str) -> None:
         self.app.switch_screen(screen_name)
 
-        def action_save_config(self) -> None:
+    def action_save_config(self) -> None:
         try:
             # 1. Get values from TUI inputs
             max_videos = int(self.query_one("#input_max_videos", Input).value)
@@ -157,7 +157,7 @@ class RunScreen(Screen):
     def action_switch_screen(self, screen_name: str) -> None:
         self.app.switch_screen(screen_name)
 
-        def action_run_pipeline(self) -> None:
+    def action_run_pipeline(self) -> None:
         self.logger.info("Starting full pipeline execution...")
         if self.app.system:
             # The core system's run_full_pipeline is blocking, so we need to run it in a worker thread
@@ -185,15 +185,12 @@ class VideoDocTUI(App):
         except Exception as e:
             self.title = "VideoDocTUI - ERROR"
             self.log(f"Error initializing core system: {e}")
-     CSS_PATH = "tui_styles.css"ss"
+    CSS_PATH = "tui_styles.css"
     SCREENS = {
         "main": MainScreen,
         "config": ConfigScreen,
         "run": RunScreen,
     }
-
-    def on_mount(self) -> None:
-        self.push_screen("main")
 
     def action_log(self, message: str) -> None:
         self.log(message)
