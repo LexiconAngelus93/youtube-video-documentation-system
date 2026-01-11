@@ -10,12 +10,15 @@ The system is built to help journalists, researchers, and activists document pat
 - **Video Download:** Downloads the searched videos, along with their metadata.
 - **Content Filtering:** Filters videos based on duration, view count, and other criteria.
 - **Automatic Categorization:** Categorizes videos into predefined topics.
-- **Video Compilation:** Creates compilation videos from the downloaded clips.
+- **Video Compilation:** Creates compilation videos from the downloaded clips with title pages.
 - **Source Attribution:** Adds a text overlay to each video with source information.
-- **YouTube Upload:** Automatically uploads compilations to a configured YouTube channel.
+- **YouTube Upload:** Automatically uploads compilations to a configured YouTube channel with AI-generated titles/descriptions.
+- **Duplicate Prevention:** Tracks used videos to prevent duplicates across sessions.
 - **Terminal UI:** An interactive terminal-based user interface for easy management.
 
 ## Quick Installation
+
+The installation scripts automatically create a **Python virtual environment** to avoid conflicts with system packages.
 
 ### Option 1: One-Command Install (Recommended)
 
@@ -42,43 +45,84 @@ git clone https://github.com/LexiconAngelus93/youtube-video-documentation-system
 cd youtube-video-documentation-system
 ```
 
-2. **Install dependencies:**
+2. **Create and activate a virtual environment:**
 ```bash
-pip3 install -r requirements.txt
+# Linux/macOS
+python3 -m venv venv
+source venv/bin/activate
+
+# Windows
+python -m venv venv
+venv\Scripts\activate.bat
 ```
 
-3. **Create directories:**
+3. **Install dependencies:**
+```bash
+pip install -r requirements.txt
+```
+
+4. **Create directories:**
 ```bash
 mkdir -p downloads/{raw_videos,metadata} compilations sessions logs
 ```
 
 ## Usage
 
-The system now features a **Terminal User Interface (TUI)** for easy management.
+After installation, use the launcher scripts to run the application (they automatically activate the virtual environment).
 
-**To launch the TUI:**
+### Using Launcher Scripts (Recommended)
+
+**Linux/macOS:**
 ```bash
-python3 main.py
+# Launch TUI (interactive mode)
+./run_tui.sh
+
+# Run with CLI arguments
+./run.sh --max-videos 10
 ```
 
-**To run the full pipeline via CLI (for scripting):**
-```bash
-python3 main.py --max-videos 10
+**Windows:**
+```batch
+REM Launch TUI (interactive mode)
+run_tui.bat
+
+REM Run with CLI arguments
+run.bat --max-videos 10
 ```
 
-**To run a specific mode via CLI:**
+### Using Virtual Environment Manually
+
+**Linux/macOS:**
 ```bash
+source venv/bin/activate
+python3 main.py           # Launch TUI
+python3 main.py --max-videos 10  # CLI mode
+```
+
+**Windows:**
+```batch
+venv\Scripts\activate.bat
+python main.py           # Launch TUI
+python main.py --max-videos 10  # CLI mode
+```
+
+### CLI Modes
+
+```bash
+# Run full pipeline
+./run.sh --mode full --max-videos 50
+
 # Search only
-python3 main.py --mode search --max-videos 50
+./run.sh --mode search --max-videos 50
 
 # Download from a previous search file
-python3 main.py --mode download --input-file sessions/20231027_153000/search_results.json
+./run.sh --mode download --input-file sessions/20231027_153000/search_results.json
 
 # Compile from existing downloads
-python3 main.py --mode compile
+./run.sh --mode compile
 
 # Upload compiled videos to YouTube
-python3 main.py --mode upload --input-file sessions/20231027_153000/compilation_report.json
+./run.sh --mode upload --input-file sessions/20231027_153000/compilation_report.json
 ```
 
 ## Configuration
@@ -88,13 +132,18 @@ The `config.yaml` file allows for customization of the search, download, compila
 ## Project Structure
 
 ```
-video-documentation-system/
+youtube-video-documentation-system/
 ├── config.yaml
 ├── main.py
 ├── requirements.txt
 ├── quick_install.sh
 ├── quick_install.bat
 ├── install.py
+├── run.sh              # Launcher script (Linux/macOS)
+├── run_tui.sh          # TUI launcher (Linux/macOS)
+├── run.bat             # Launcher script (Windows)
+├── run_tui.bat         # TUI launcher (Windows)
+├── venv/               # Virtual environment (created during install)
 ├── README.md
 ├── USER_GUIDE.md
 ├── TECHNICAL_DOCS.md
@@ -104,8 +153,13 @@ video-documentation-system/
     ├── video_compiler.py
     ├── video_downloader.py
     ├── youtube_searcher.py
-    ├── youtube_uploader.py
-    └── tui.py
+    ├── tracker.py
+    ├── tui.py
+    └── youtube/
+        ├── __init__.py
+        ├── auth.py
+        ├── content.py
+        └── uploader.py
 ```
 
 ## Dependencies
@@ -114,12 +168,25 @@ video-documentation-system/
 - **MoviePy** - A library for video editing, which is used to create the compilation videos.
 - **PyYAML** - A YAML parser and emitter for Python.
 - **google-api-python-client** - Google API client for YouTube uploads.
+- **google-auth-oauthlib** - OAuth 2.0 authentication for Google APIs.
+- **openai** - OpenAI API client for AI-generated titles and descriptions.
 - **textual** - A TUI (Text User Interface) framework for Python.
 
 ## Documentation
 
 - **USER_GUIDE.md** - Comprehensive user documentation
 - **TECHNICAL_DOCS.md** - Developer and technical documentation
+
+## Troubleshooting
+
+### "externally-managed-environment" Error
+If you see this error when installing, it means your system uses PEP 668 to protect system packages. The quick install scripts automatically handle this by using a virtual environment. If you're installing manually, make sure to create and activate a virtual environment first (see Manual Installation above).
+
+### Missing python3-venv
+On Debian/Ubuntu systems, you may need to install the venv module:
+```bash
+sudo apt install python3-venv
+```
 
 ## License
 

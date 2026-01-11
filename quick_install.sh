@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # YouTube Video Documentation System - Quick Install Script
-# This script will download and set up the complete system
+# This script will download and set up the complete system using a virtual environment
 
 set -e  # Exit on any error
 
@@ -25,13 +25,25 @@ fi
 
 echo "✅ Python $PYTHON_VERSION detected"
 
-# Check if pip is installed
-if ! command -v pip3 &> /dev/null; then
-    echo "❌ pip3 is required but not installed. Please install pip3 first."
-    exit 1
+# Check if python3-venv is available (needed for virtual environments)
+if ! python3 -m venv --help &> /dev/null; then
+    echo "⚠️  python3-venv is not installed. Attempting to install..."
+    if command -v apt-get &> /dev/null; then
+        sudo apt-get update && sudo apt-get install -y python3-venv
+    elif command -v dnf &> /dev/null; then
+        sudo dnf install -y python3-venv
+    elif command -v yum &> /dev/null; then
+        sudo yum install -y python3-venv
+    else
+        echo "❌ Could not install python3-venv. Please install it manually:"
+        echo "   Debian/Ubuntu: sudo apt install python3-venv"
+        echo "   Fedora: sudo dnf install python3-venv"
+        echo "   RHEL/CentOS: sudo yum install python3-venv"
+        exit 1
+    fi
 fi
 
-echo "✅ pip3 detected"
+echo "✅ python3-venv available"
 
 # Create project directory
 PROJECT_DIR="youtube-video-documentation-system"
@@ -70,12 +82,21 @@ fi
 
 echo "✅ Project files downloaded"
 
-# Install Python dependencies
-echo "📦 Installing Python dependencies..."
-pip3 install -r requirements.txt
+# Create virtual environment
+echo "🐍 Creating Python virtual environment..."
+python3 -m venv venv
 
-# Note: The YouTube Uploader requires the user to manually complete the OAuth 2.0 flow
-# to generate the 'youtube_credentials.json' file. See USER_GUIDE.md for details.
+echo "✅ Virtual environment created"
+
+# Activate virtual environment and install dependencies
+echo "📦 Installing Python dependencies in virtual environment..."
+source venv/bin/activate
+
+# Upgrade pip first
+pip install --upgrade pip
+
+# Install dependencies
+pip install -r requirements.txt
 
 echo "✅ Dependencies installed"
 
@@ -92,6 +113,29 @@ echo "✅ Directory structure created"
 # Make main script executable
 chmod +x main.py
 
+# Create a launcher script that activates venv automatically
+echo "📝 Creating launcher script..."
+cat > run.sh << 'EOF'
+#!/bin/bash
+# Launcher script for YouTube Video Documentation System
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/venv/bin/activate"
+python3 "$SCRIPT_DIR/main.py" "$@"
+EOF
+chmod +x run.sh
+
+# Create TUI launcher script
+cat > run_tui.sh << 'EOF'
+#!/bin/bash
+# TUI Launcher script for YouTube Video Documentation System
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/venv/bin/activate"
+python3 "$SCRIPT_DIR/main.py"
+EOF
+chmod +x run_tui.sh
+
+echo "✅ Launcher scripts created"
+
 # Test installation
 echo "🧪 Testing installation..."
 if python3 main.py --help > /dev/null 2>&1; then
@@ -100,14 +144,26 @@ else
     echo "⚠️  Installation test failed, but files are installed"
 fi
 
+# Deactivate virtual environment
+deactivate
+
 echo ""
 echo "🎉 Installation Complete!"
 echo "=================================================="
 echo ""
 echo "📍 Project installed in: $(pwd)"
 echo ""
-echo "🚀 Quick Start:"
-echo "   python3 main.py --max-videos 10"
+echo "🚀 Quick Start (choose one):"
+echo ""
+echo "   Option 1 - Use launcher script:"
+echo "      ./run.sh --max-videos 10"
+echo ""
+echo "   Option 2 - Activate venv manually:"
+echo "      source venv/bin/activate"
+echo "      python3 main.py --max-videos 10"
+echo ""
+echo "   Option 3 - Launch TUI (interactive mode):"
+echo "      ./run_tui.sh"
 echo ""
 echo "📖 Documentation:"
 echo "   - README.md - Project overview"

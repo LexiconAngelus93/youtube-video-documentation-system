@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 YouTube Video Documentation System - Cross-Platform Installer
-This script provides a cross-platform installation method using Python
+This script provides a cross-platform installation method using Python virtual environments
 """
 
 import os
@@ -10,6 +10,7 @@ import subprocess
 import urllib.request
 import zipfile
 import shutil
+import venv
 from pathlib import Path
 
 def print_header():
@@ -25,15 +26,15 @@ def check_python_version():
     print(f"✅ Python {version.major}.{version.minor}.{version.micro} detected")
     return True
 
-def check_pip():
-    """Check if pip is available"""
+def check_venv():
+    """Check if venv module is available"""
     try:
-        subprocess.run([sys.executable, "-m", "pip", "--version"], 
-                      check=True, capture_output=True)
-        print("✅ pip detected")
+        import venv
+        print("✅ venv module available")
         return True
-    except subprocess.CalledProcessError:
-        print("❌ pip is required but not available")
+    except ImportError:
+        print("❌ venv module is required but not available")
+        print("   Install it with: apt install python3-venv (Debian/Ubuntu)")
         return False
 
 def download_project():
@@ -83,12 +84,46 @@ def download_project():
     
     return True
 
-def install_dependencies():
-    """    # Install dependencies
-    print("📦 Installing Python dependencies...")
+def create_virtual_environment():
+    """Create a Python virtual environment"""
+    print("🐍 Creating Python virtual environment...")
     
     try:
-        subprocess.run([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"], 
+        venv.create("venv", with_pip=True)
+        print("✅ Virtual environment created")
+        return True
+    except Exception as e:
+        print(f"❌ Failed to create virtual environment: {e}")
+        return False
+
+def get_venv_python():
+    """Get the path to the Python executable in the virtual environment"""
+    if os.name == 'nt':  # Windows
+        return os.path.join("venv", "Scripts", "python.exe")
+    else:  # Unix/Linux/Mac
+        return os.path.join("venv", "bin", "python")
+
+def get_venv_pip():
+    """Get the path to pip in the virtual environment"""
+    if os.name == 'nt':  # Windows
+        return os.path.join("venv", "Scripts", "pip.exe")
+    else:  # Unix/Linux/Mac
+        return os.path.join("venv", "bin", "pip")
+
+def install_dependencies():
+    """Install dependencies in the virtual environment"""
+    print("📦 Installing Python dependencies in virtual environment...")
+    
+    venv_pip = get_venv_pip()
+    venv_python = get_venv_python()
+    
+    try:
+        # Upgrade pip first
+        subprocess.run([venv_python, "-m", "pip", "install", "--upgrade", "pip"], 
+                      check=True, capture_output=True)
+        
+        # Install dependencies
+        subprocess.run([venv_pip, "install", "-r", "requirements.txt"], 
                       check=True)
         print("✅ Dependencies installed")
         
@@ -117,6 +152,47 @@ def create_directories():
     
     print("✅ Directory structure created")
 
+def create_launcher_scripts():
+    """Create launcher scripts that activate the virtual environment"""
+    print("📝 Creating launcher scripts...")
+    
+    if os.name == 'nt':  # Windows
+        # Create run.bat
+        with open("run.bat", "w") as f:
+            f.write('@echo off\n')
+            f.write('REM Launcher script for YouTube Video Documentation System\n')
+            f.write('cd /d "%~dp0"\n')
+            f.write('call venv\\Scripts\\activate.bat\n')
+            f.write('python main.py %*\n')
+        
+        # Create run_tui.bat
+        with open("run_tui.bat", "w") as f:
+            f.write('@echo off\n')
+            f.write('REM TUI Launcher script for YouTube Video Documentation System\n')
+            f.write('cd /d "%~dp0"\n')
+            f.write('call venv\\Scripts\\activate.bat\n')
+            f.write('python main.py\n')
+    else:  # Unix/Linux/Mac
+        # Create run.sh
+        with open("run.sh", "w") as f:
+            f.write('#!/bin/bash\n')
+            f.write('# Launcher script for YouTube Video Documentation System\n')
+            f.write('SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"\n')
+            f.write('source "$SCRIPT_DIR/venv/bin/activate"\n')
+            f.write('python3 "$SCRIPT_DIR/main.py" "$@"\n')
+        os.chmod("run.sh", 0o755)
+        
+        # Create run_tui.sh
+        with open("run_tui.sh", "w") as f:
+            f.write('#!/bin/bash\n')
+            f.write('# TUI Launcher script for YouTube Video Documentation System\n')
+            f.write('SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"\n')
+            f.write('source "$SCRIPT_DIR/venv/bin/activate"\n')
+            f.write('python3 "$SCRIPT_DIR/main.py"\n')
+        os.chmod("run_tui.sh", 0o755)
+    
+    print("✅ Launcher scripts created")
+
 def make_executable():
     """Make main script executable on Unix systems"""
     if os.name != 'nt':  # Not Windows
@@ -129,8 +205,10 @@ def test_installation():
     """Test if installation was successful"""
     print("🧪 Testing installation...")
     
+    venv_python = get_venv_python()
+    
     try:
-        result = subprocess.run([sys.executable, "main.py", "--help"], 
+        result = subprocess.run([venv_python, "main.py", "--help"], 
                               capture_output=True, text=True, timeout=10)
         if result.returncode == 0:
             print("✅ Installation test passed")
@@ -150,8 +228,30 @@ def print_completion_message():
     print()
     print(f"📍 Project installed in: {os.getcwd()}")
     print()
-    print("🚀 Quick Start:")
-    print("   python main.py --max-videos 10")
+    print("🚀 Quick Start (choose one):")
+    print()
+    
+    if os.name == 'nt':  # Windows
+        print("   Option 1 - Use launcher script:")
+        print("      run.bat --max-videos 10")
+        print()
+        print("   Option 2 - Activate venv manually:")
+        print("      venv\\Scripts\\activate.bat")
+        print("      python main.py --max-videos 10")
+        print()
+        print("   Option 3 - Launch TUI (interactive mode):")
+        print("      run_tui.bat")
+    else:  # Unix/Linux/Mac
+        print("   Option 1 - Use launcher script:")
+        print("      ./run.sh --max-videos 10")
+        print()
+        print("   Option 2 - Activate venv manually:")
+        print("      source venv/bin/activate")
+        print("      python3 main.py --max-videos 10")
+        print()
+        print("   Option 3 - Launch TUI (interactive mode):")
+        print("      ./run_tui.sh")
+    
     print()
     print("📖 Documentation:")
     print("   - README.md - Project overview")
@@ -173,17 +273,23 @@ def main():
     if not check_python_version():
         sys.exit(1)
     
-    if not check_pip():
+    if not check_venv():
         sys.exit(1)
     
-    # Download and install
+    # Download project
     if not download_project():
         sys.exit(1)
     
+    # Create virtual environment
+    if not create_virtual_environment():
+        sys.exit(1)
+    
+    # Install dependencies
     if not install_dependencies():
         sys.exit(1)
     
     create_directories()
+    create_launcher_scripts()
     make_executable()
     test_installation()
     print_completion_message()
