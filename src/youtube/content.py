@@ -61,8 +61,8 @@ class ContentGenerator:
             )
 
             # Extract content from the response
-            # The response structure for responses.create() differs from chat.completions.create()
-            output_text = response.output_text
+            # The response structure for responses.create() uses response.output[0].content[0].text
+            output_text = response.output[0].content[0].text
             content = json.loads(output_text)
             self.logger.info(f"Generated content: {content.get('title', 'N/A')[:50]}...")
             return content

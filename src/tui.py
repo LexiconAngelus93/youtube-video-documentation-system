@@ -181,7 +181,8 @@ class RunScreen(Screen):
         if self.app.system:
             # The core system's run_full_pipeline is blocking, so we need to run it in a worker thread
             # to keep the TUI responsive.
-            self.run_worker(self._run_pipeline_async, exclusive=True)
+            # Pass the coroutine object (with parentheses) not the function reference
+            self.run_worker(self._run_pipeline_async(), exclusive=True)
             self.logger.info("Pipeline execution started in background.")
         else:
             self.logger.error("Core system not initialized. Please check config.yaml.")
