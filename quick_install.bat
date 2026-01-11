@@ -1,6 +1,6 @@
 @echo off
 REM YouTube Video Documentation System - Quick Install Script (Windows)
-REM This script will download and set up the complete system
+REM This script will download and set up the complete system using a virtual environment
 
 echo 🚀 YouTube Video Documentation System - Quick Install
 echo ==================================================
@@ -58,12 +58,21 @@ if not errorlevel 1 (
 
 echo ✅ Project files downloaded
 
-REM Install Python dependencies
-echo 📦 Installing Python dependencies...
-pip install -r requirements.txt
+REM Create virtual environment
+echo 🐍 Creating Python virtual environment...
+python -m venv venv
 
-REM Note: The YouTube Uploader requires the user to manually complete the OAuth 2.0 flow
-REM to generate the 'youtube_credentials.json' file. See USER_GUIDE.md for details.
+echo ✅ Virtual environment created
+
+REM Activate virtual environment and install dependencies
+echo 📦 Installing Python dependencies in virtual environment...
+call venv\Scripts\activate.bat
+
+REM Upgrade pip first
+python -m pip install --upgrade pip
+
+REM Install dependencies
+pip install -r requirements.txt
 
 echo ✅ Dependencies installed
 
@@ -77,6 +86,27 @@ mkdir logs 2>nul
 
 echo ✅ Directory structure created
 
+REM Create launcher batch file
+echo 📝 Creating launcher scripts...
+(
+echo @echo off
+echo REM Launcher script for YouTube Video Documentation System
+echo cd /d "%%~dp0"
+echo call venv\Scripts\activate.bat
+echo python main.py %%*
+) > run.bat
+
+REM Create TUI launcher batch file
+(
+echo @echo off
+echo REM TUI Launcher script for YouTube Video Documentation System
+echo cd /d "%%~dp0"
+echo call venv\Scripts\activate.bat
+echo python main.py
+) > run_tui.bat
+
+echo ✅ Launcher scripts created
+
 REM Test installation
 echo 🧪 Testing installation...
 python main.py --help >nul 2>&1
@@ -86,14 +116,26 @@ if not errorlevel 1 (
     echo ⚠️  Installation test failed, but files are installed
 )
 
+REM Deactivate virtual environment
+call venv\Scripts\deactivate.bat 2>nul
+
 echo.
 echo 🎉 Installation Complete!
 echo ==================================================
 echo.
 echo 📍 Project installed in: %CD%
 echo.
-echo 🚀 Quick Start:
-echo    python main.py --max-videos 10
+echo 🚀 Quick Start (choose one):
+echo.
+echo    Option 1 - Use launcher script:
+echo       run.bat --max-videos 10
+echo.
+echo    Option 2 - Activate venv manually:
+echo       venv\Scripts\activate.bat
+echo       python main.py --max-videos 10
+echo.
+echo    Option 3 - Launch TUI (interactive mode):
+echo       run_tui.bat
 echo.
 echo 📖 Documentation:
 echo    - README.md - Project overview
