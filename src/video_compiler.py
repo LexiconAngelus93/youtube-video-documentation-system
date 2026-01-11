@@ -21,7 +21,10 @@ from moviepy import (
     concatenate_videoclips, ColorClip, config
 )
 
-from .tracker import VideoTracker
+try:
+    from .tracker import VideoTracker
+except ImportError:
+    from tracker import VideoTracker
 
 
 class VideoCompiler:
@@ -408,43 +411,11 @@ class VideoCompiler:
         
         for i, video in enumerate(videos):
             try:
-                # Load video clip
-                video_clip = VideoFileClip(video["filepath"])
-                
-                # 1. Create and add title page clip
-                title_page_clip = self._create_title_page_clip(video)
-                clips.append(title_page_clip)
-                
-                # Track title page segment
-                video_segments.append({
-                    'video_id': video.get('video_id', ''),
-                    'title': f"Title Page: {video.get('title', '')}",
-                    'start_time': sum(clip.duration for clip in clips[:-1]),
-                    'duration': title_page_clip.duration,
-                    'source_url': video.get('url', '')
-                })
-
-                
-                # Create attribution text
-                attribution_text = self._create_attribution_text(video)
-                
-                # 2. Add attribution overlay to the main video clip
-                clip_with_attribution = self._add_attribution_overlay(
-                    video_clip, attribution_text
-                )
-                
-                clips.append(clip_with_attribution)
-                
-                # 3. Track main video segment information
-                video_segments.append({
-                    'video_id': video.get('video_id', ''),
-                    'title': video.get('title', ''),
-                    'start_time': sum(clip.duration for clip in clips[:-1]),
-                    'duration': clip_with_attribution.duration,
-                    'source_url': video.get('url', '')
-                })
-                
-                self.logger.debug(f"Added video {i+1}/{len(videos)} to compilation")
+                # Use helper method to compile video segments, passing global clips for timing
+                new_clips, new_segs = self._compile_video_segments(video, clips)
+                clips.extend(new_clips)
+                video_segments.extend(new_segs)
+                self.logger.debug(f"Added {len(new_clips)} clips for video {i+1}/{len(videos)}")
                 
             except Exception as e:
                 self.logger.error(f"Error processing video {video.get('video_id', 'unknown')}: {str(e)}")
@@ -583,6 +554,62 @@ class VideoCompiler:
             title_page = title_page.resized(height=720)
             
         return title_page
+
+    def _make_segment(self, video: Dict[str, Any], clip, clips_so_far: List, title_prefix: str = "") -> Dict[str, Any]:
+        """
+        Create a segment dictionary for a clip.
+        
+        Args:
+            video (Dict[str, Any]): Video information
+            clip: The video clip
+            clips_so_far (List): List of clips already added (for calculating start_time)
+            title_prefix (str): Prefix to add to the title
+            
+        Returns:
+            Dict[str, Any]: Segment information dictionary
+        """
+        start_time = sum(c.duration for c in clips_so_far)
+        title = f"{title_prefix}{video.get('title', '')}"
+        return {
+            'video_id': video.get('video_id', ''),
+            'title': title,
+            'start_time': start_time,
+            'duration': clip.duration,
+            'source_url': video.get('url', '')
+        }
+    
+    def _compile_video_segments(self, video: Dict[str, Any], global_clips_so_far: List) -> Tuple[List, List[Dict[str, Any]]]:
+        """
+        Build title-page + main clips and their segment entries for one video.
+        
+        Args:
+            video (Dict[str, Any]): Video information
+            global_clips_so_far (List): List of all clips added so far in the compilation
+                                        (for calculating global start_time)
+            
+        Returns:
+            Tuple[List, List[Dict[str, Any]]]: Tuple of (clips list, segments list)
+        """
+        clips = []
+        segments = []
+        
+        # 1) Create and add title page
+        title_clip = self._create_title_page_clip(video)
+        # Calculate start_time based on global clips + local clips added so far
+        all_clips = global_clips_so_far + clips
+        segments.append(self._make_segment(video, title_clip, all_clips, title_prefix="Title Page: "))
+        clips.append(title_clip)
+        
+        # 2) Load main video and add attribution overlay
+        raw_clip = VideoFileClip(video["filepath"])
+        attribution_text = self._create_attribution_text(video)
+        clip_with_attr = self._add_attribution_overlay(raw_clip, attribution_text)
+        # Update all_clips to include the title clip we just added
+        all_clips = global_clips_so_far + clips
+        segments.append(self._make_segment(video, clip_with_attr, all_clips))
+        clips.append(clip_with_attr)
+        
+        return clips, segments
 
     def _create_attribution_text(self, video: Dict[str, Any]) -> str:
         """

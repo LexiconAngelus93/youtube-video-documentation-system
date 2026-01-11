@@ -98,7 +98,7 @@ def install_dependencies():
         return True
     except subprocess.CalledProcessError as e:
         print(f"❌ Failed to install dependencies: {e}")
-        return Falsealse
+        return False
 
 def create_directories():
     """Create necessary project directories"""

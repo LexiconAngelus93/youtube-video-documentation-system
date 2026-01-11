@@ -10,10 +10,11 @@ from textual.screen import Screen
 from textual.binding import Binding
 
 # Add project root to path to import main.py components
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import the core system (assuming main.py contains the VideoDocumentationSystem class)
-from main import VideoDocumentationSystem 
+from main import VideoDocumentationSystem
+
 
 # --- Logging Setup for TUI ---
 # We will use a custom handler to pipe logs to the RichLog widget
@@ -26,6 +27,7 @@ class TextualLogHandler(logging.Handler):
     def emit(self, record):
         msg = self.format(record)
         self.log_widget.write(msg)
+
 
 # --- TUI Screens ---
 
@@ -56,6 +58,16 @@ class MainScreen(Screen):
 
     def action_quit(self) -> None:
         self.app.exit()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button presses."""
+        if event.button.id == "btn_config":
+            self.app.switch_screen("config")
+        elif event.button.id == "btn_run":
+            self.app.switch_screen("run")
+        elif event.button.id == "btn_quit":
+            self.app.exit()
+
 
 class ConfigScreen(Screen):
     BINDINGS = [
@@ -100,7 +112,7 @@ class ConfigScreen(Screen):
     def action_switch_screen(self, screen_name: str) -> None:
         self.app.switch_screen(screen_name)
 
-        def action_save_config(self) -> None:
+    def action_save_config(self) -> None:
         try:
             # 1. Get values from TUI inputs
             max_videos = int(self.query_one("#input_max_videos", Input).value)
@@ -129,6 +141,12 @@ class ConfigScreen(Screen):
         except Exception as e:
             self.app.log(f"Error saving config: {e}")
 
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button presses."""
+        if event.button.id == "btn_save_config":
+            self.action_save_config()
+
+
 class RunScreen(Screen):
     BINDINGS = [
         Binding("escape", "switch_screen('main')", "Back"),
@@ -147,7 +165,8 @@ class RunScreen(Screen):
             RichLog(id="log_output", classes="log-panel"),
             classes="run-container"
         )
-        
+
+    def on_mount(self) -> None:
         # Set up logging to pipe to the RichLog widget
         self.log_handler = TextualLogHandler(self.query_one("#log_output", RichLog))
         self.logger = logging.getLogger("system_log")
@@ -157,20 +176,47 @@ class RunScreen(Screen):
     def action_switch_screen(self, screen_name: str) -> None:
         self.app.switch_screen(screen_name)
 
-        def action_run_pipeline(self) -> None:
+    def action_run_pipeline(self) -> None:
         self.logger.info("Starting full pipeline execution...")
         if self.app.system:
             # The core system's run_full_pipeline is blocking, so we need to run it in a worker thread
             # to keep the TUI responsive.
-            self.run_worker(self.app.system.run_full_pipeline(), exclusive=True)
+            # Pass the coroutine object (with parentheses) not the function reference
+            self.run_worker(self._run_pipeline_async(), exclusive=True)
             self.logger.info("Pipeline execution started in background.")
         else:
             self.logger.error("Core system not initialized. Please check config.yaml.")
+
+    async def _run_pipeline_async(self) -> None:
+        """Async wrapper for running the pipeline in a worker thread."""
+        import asyncio
+        loop = asyncio.get_event_loop()
+        try:
+            result = await loop.run_in_executor(None, self.app.system.run_full_pipeline)
+            if result.get('success'):
+                self.logger.info(f"Pipeline completed successfully! Session: {result.get('session_id')}")
+            else:
+                self.logger.error(f"Pipeline failed. Errors: {result.get('errors', [])}")
+        except Exception as e:
+            self.logger.error(f"Pipeline error: {e}")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button presses."""
+        if event.button.id == "btn_start_run":
+            self.action_run_pipeline()
+        elif event.button.id == "btn_stop_run":
+            self.logger.info("Stop requested. Use Ctrl+C to interrupt.")
 
 
 # --- Main Application ---
 
 class VideoDocTUI(App):
+    CSS_PATH = "tui_styles.css"
+    SCREENS = {
+        "main": MainScreen,
+        "config": ConfigScreen,
+        "run": RunScreen,
+    }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -178,25 +224,20 @@ class VideoDocTUI(App):
         self.config_path = "config.yaml"
 
     def on_mount(self) -> None:
-        self.push_screen("main")
         try:
             self.system = VideoDocumentationSystem(self.config_path)
             self.title = f"VideoDocTUI - Session: {self.system.session_id}"
         except Exception as e:
             self.title = "VideoDocTUI - ERROR"
             self.log(f"Error initializing core system: {e}")
-     CSS_PATH = "tui_styles.css"ss"
-    SCREENS = {
-        "main": MainScreen,
-        "config": ConfigScreen,
-        "run": RunScreen,
-    }
-
-    def on_mount(self) -> None:
+        
+        # Push the main screen after initialization (inside or outside try/except)
+        # This ensures the UI is shown even if system initialization fails
         self.push_screen("main")
 
     def action_log(self, message: str) -> None:
         self.log(message)
+
 
 if __name__ == "__main__":
     # Create a dummy config.yaml for testing the TUI structure

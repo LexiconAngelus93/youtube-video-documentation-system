@@ -24,7 +24,7 @@ from youtube_searcher import YouTubeSearcher
 from video_downloader import VideoDownloader
 from video_compiler import VideoCompiler
 from content_filter import ContentFilter
-from youtube_uploader import YouTubeUploader
+from youtube import YouTubeUploader
 from tracker import VideoTracker
 
 
@@ -206,7 +206,7 @@ class VideoDocumentationSystem:
             compilations_to_upload = compilation_results.get("compilations", [])
             upload_results_list = []
             for comp in compilations_to_upload:
-                upload_result = self.uploader.upload_video(comp)
+                upload_result = self.uploader.upload_compilation(comp)
                 upload_results_list.append(upload_result)
             results['upload_results'] = upload_results_list
             
