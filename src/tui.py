@@ -223,13 +223,16 @@ class VideoDocTUI(App):
         self.config_path = "config.yaml"
 
     def on_mount(self) -> None:
-        self.push_screen("main")
         try:
             self.system = VideoDocumentationSystem(self.config_path)
             self.title = f"VideoDocTUI - Session: {self.system.session_id}"
         except Exception as e:
             self.title = "VideoDocTUI - ERROR"
             self.log(f"Error initializing core system: {e}")
+        
+        # Push the main screen after initialization (inside or outside try/except)
+        # This ensures the UI is shown even if system initialization fails
+        self.push_screen("main")
 
     def action_log(self, message: str) -> None:
         self.log(message)

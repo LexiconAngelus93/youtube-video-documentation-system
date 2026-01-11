@@ -46,6 +46,46 @@ class ContentGenerator:
         user_prompt = self._build_user_prompt(compilation_info)
 
         try:
+            # Use responses.create() for OpenAI SDK 2.x with models like gpt-4.1-mini
+            response = self.client.responses.create(
+                model=self.model,
+                instructions=system_prompt,
+                input=user_prompt,
+                text={
+                    "format": {
+                        "type": "json_object"
+                    }
+                },
+                temperature=0.7,
+                max_output_tokens=1000
+            )
+
+            # Extract content from the response
+            # The response structure for responses.create() differs from chat.completions.create()
+            output_text = response.output_text
+            content = json.loads(output_text)
+            self.logger.info(f"Generated content: {content.get('title', 'N/A')[:50]}...")
+            return content
+
+        except Exception as e:
+            self.logger.error(f"Content generation failed: {e}")
+            # Fallback to chat.completions.create() if responses.create() fails
+            return self._generate_with_chat_completions(system_prompt, user_prompt, compilation_info)
+
+    def _generate_with_chat_completions(self, system_prompt: str, user_prompt: str, 
+                                         compilation_info: Dict[str, Any]) -> Dict[str, str]:
+        """
+        Fallback method using chat.completions.create() for compatibility.
+        
+        Args:
+            system_prompt: The system prompt
+            user_prompt: The user prompt
+            compilation_info: Compilation metadata for fallback content
+            
+        Returns:
+            Dictionary with 'title' and 'description' keys
+        """
+        try:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -58,11 +98,11 @@ class ContentGenerator:
             )
 
             content = json.loads(response.choices[0].message.content)
-            self.logger.info(f"Generated content: {content.get('title', 'N/A')[:50]}...")
+            self.logger.info(f"Generated content (fallback): {content.get('title', 'N/A')[:50]}...")
             return content
 
         except Exception as e:
-            self.logger.error(f"Content generation failed: {e}")
+            self.logger.error(f"Fallback content generation also failed: {e}")
             return self._generate_fallback_content(compilation_info)
 
     def _build_system_prompt(self) -> str:
