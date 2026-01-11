@@ -10,10 +10,11 @@ from textual.screen import Screen
 from textual.binding import Binding
 
 # Add project root to path to import main.py components
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import the core system (assuming main.py contains the VideoDocumentationSystem class)
-from main import VideoDocumentationSystem 
+from main import VideoDocumentationSystem
+
 
 # --- Logging Setup for TUI ---
 # We will use a custom handler to pipe logs to the RichLog widget
@@ -26,6 +27,7 @@ class TextualLogHandler(logging.Handler):
     def emit(self, record):
         msg = self.format(record)
         self.log_widget.write(msg)
+
 
 # --- TUI Screens ---
 
@@ -56,6 +58,7 @@ class MainScreen(Screen):
 
     def action_quit(self) -> None:
         self.app.exit()
+
 
 class ConfigScreen(Screen):
     BINDINGS = [
@@ -100,7 +103,7 @@ class ConfigScreen(Screen):
     def action_switch_screen(self, screen_name: str) -> None:
         self.app.switch_screen(screen_name)
 
-        def action_save_config(self) -> None:
+    def action_save_config(self) -> None:
         try:
             # 1. Get values from TUI inputs
             max_videos = int(self.query_one("#input_max_videos", Input).value)
@@ -129,6 +132,7 @@ class ConfigScreen(Screen):
         except Exception as e:
             self.app.log(f"Error saving config: {e}")
 
+
 class RunScreen(Screen):
     BINDINGS = [
         Binding("escape", "switch_screen('main')", "Back"),
@@ -147,7 +151,8 @@ class RunScreen(Screen):
             RichLog(id="log_output", classes="log-panel"),
             classes="run-container"
         )
-        
+
+    def on_mount(self) -> None:
         # Set up logging to pipe to the RichLog widget
         self.log_handler = TextualLogHandler(self.query_one("#log_output", RichLog))
         self.logger = logging.getLogger("system_log")
@@ -157,7 +162,7 @@ class RunScreen(Screen):
     def action_switch_screen(self, screen_name: str) -> None:
         self.app.switch_screen(screen_name)
 
-        def action_run_pipeline(self) -> None:
+    def action_run_pipeline(self) -> None:
         self.logger.info("Starting full pipeline execution...")
         if self.app.system:
             # The core system's run_full_pipeline is blocking, so we need to run it in a worker thread
@@ -171,6 +176,12 @@ class RunScreen(Screen):
 # --- Main Application ---
 
 class VideoDocTUI(App):
+    CSS_PATH = "tui_styles.css"
+    SCREENS = {
+        "main": MainScreen,
+        "config": ConfigScreen,
+        "run": RunScreen,
+    }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -185,18 +196,10 @@ class VideoDocTUI(App):
         except Exception as e:
             self.title = "VideoDocTUI - ERROR"
             self.log(f"Error initializing core system: {e}")
-     CSS_PATH = "tui_styles.css"ss"
-    SCREENS = {
-        "main": MainScreen,
-        "config": ConfigScreen,
-        "run": RunScreen,
-    }
-
-    def on_mount(self) -> None:
-        self.push_screen("main")
 
     def action_log(self, message: str) -> None:
         self.log(message)
+
 
 if __name__ == "__main__":
     # Create a dummy config.yaml for testing the TUI structure

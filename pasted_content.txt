@@ -1,0 +1,568 @@
+Please address the comments from this code review:
+
+## Overall Comments
+- Production code in video_compiler.py still contains inline test scaffolding and monkey-patching of VideoFileClip—please move all test logic into dedicated test files and remove it from the main module.
+- The TUI class defines on_mount twice and even has a typo in CSS_PATH (`"tui_styles.css"ss"`); clean up duplicated methods and fix resource paths for consistency.
+- main.py’s CLI argument parsing and mode dispatch are now very dense—consider extracting that into a separate CLI handler or command pattern to simplify the entry-point logic.
+
+## Individual Comments
+
+### Comment 1
+<location> `src/tui.py:188` </location>
+<code_context>
++        except Exception as e:
++            self.title = "VideoDocTUI - ERROR"
++            self.log(f"Error initializing core system: {e}")
++     CSS_PATH = "tui_styles.css"ss"
++    SCREENS = {
++        "main": MainScreen,
+</code_context>
+
+<issue_to_address>
+**issue (typo):** CSS_PATH assignment contains a typo and syntax error.
+
+Remove the extra 'ss"' from the assignment to fix the syntax error.
+
+```suggestion
+    CSS_PATH = "tui_styles.css"
+```
+</issue_to_address>
+
+### Comment 2
+<location> `src/tui.py:160-167` </location>
+<code_context>
++    def action_switch_screen(self, screen_name: str) -> None:
++        self.app.switch_screen(screen_name)
++
++        def action_run_pipeline(self) -> None:
++        self.logger.info("Starting full pipeline execution...")
++        if self.app.system:
++            # The core system's run_full_pipeline is blocking, so we need to run it in a worker thread
++            # to keep the TUI responsive.
++            self.run_worker(self.app.system.run_full_pipeline(), exclusive=True)
++            self.logger.info("Pipeline execution started in background.")
++        else:
++            self.logger.error("Core system not initialized. Please check config.yaml.")
++
+</code_context>
+
+<issue_to_address>
+**issue:** Method 'action_run_pipeline' is incorrectly indented inside another method.
+
+Please move 'action_run_pipeline' out of 'compose' and define it as a class method.
+</issue_to_address>
+
+### Comment 3
+<location> `install.py:100` </location>
+<code_context>
+         return True
+     except subprocess.CalledProcessError as e:
+         print(f"❌ Failed to install dependencies: {e}")
+-        return False
++        return Falsealse
+
+ def create_directories():
+</code_context>
+
+<issue_to_address>
+**issue (typo):** Typo in return statement: 'return Falsealse'.
+
+Replace 'return Falsealse' with 'return False' to prevent a NameError exception.
+
+```suggestion
+        print(f"❌ Failed to install dependencies: {e}")
+        return False
+```
+</issue_to_address>
+
+### Comment 4
+<location> `src/video_compiler.py:409` </location>
+<code_context>
+
+         for i, video in enumerate(videos):
+             try:
+-                # Load video clip (first 5 seconds for testing)
+</code_context>
+
+<issue_to_address>
+**issue (complexity):** Consider refactoring the in-loop logic of _create_single_compilation into dedicated helper methods for segment creation and clip assembly.
+
+Here’s one way to pull most of that in-loop logic out into focused helpers and dramatically shrink `_create_single_compilation`. You keep all the same behavior, but now you:
+
+ 1. Move title+main clip assembly into its own `_compile_video_segments`  
+ 2. Move the “make one segment dict” bits into a `_make_segment` helper  
+
+```python
+# In VideoCompiler…
+
+def _make_segment(self, video, clip, title_prefix: str = "") -> Dict[str, Any]:
+    """Return the segment dict for a clip."""
+    start = sum(c.duration for c in self._current_clips)
+    title = f"{title_prefix}{video.get('title','')}"
+    return {
+        'video_id': video.get('video_id',''),
+        'title': title,
+        'start_time': start,
+        'duration': clip.duration,
+        'source_url': video.get('url','')
+    }
+
+def _compile_video_segments(self, video: Dict[str, Any]) -> Tuple[List[VideoClip], List[Dict]]:
+    """Build title‐page + main clips and their segment entries for one video."""
+    clips: List[VideoClip] = []
+    segments: List[Dict] = []
+
+    # keep a reference for start_time calcs
+    self._current_clips = clips
+
+    # 1) title page
+    title_clip = self._create_title_page_clip(video)
+    clips.append(title_clip)
+    segments.append(self._make_segment(video, title_clip, title_prefix="Title Page: "))
+
+    # 2) main video + attribution
+    raw = VideoFileClip(video["filepath"])
+    clip_with_attr = self._add_attribution_overlay(raw, self._create_attribution_text(video))
+    clips.append(clip_with_attr)
+    segments.append(self._make_segment(video, clip_with_attr))
+
+    return clips, segments
+```
+
+Then your loop in `_create_single_compilation` collapses to:
+
+```python
+clips, video_segments = [], []
+for video in videos:
+    try:
+        new_clips, new_segs = self._compile_video_segments(video)
+        clips.extend(new_clips)
+        video_segments.extend(new_segs)
+        self.logger.debug(f"Added {len(new_clips)} clips for video {video['video_id']}")
+    except Exception as e:
+        self.logger.error(f"…")
+```
+
+This:
+
+- Removes all inline start‐time math,
+- Keeps `_create_single_compilation` focused,
+- Encapsulates segment‐building into small helpers.
+</issue_to_address>
+
+### Comment 5
+<location> `src/youtube_uploader.py:37` </location>
+<code_context>
++API_SERVICE_NAME = "youtube"
++API_VERSION = "v3"
++
++class YouTubeUploader:
++    """
++    A class to handle YouTube video uploads and content generation.
+</code_context>
+
+<issue_to_address>
+**issue (complexity):** Consider splitting YouTubeUploader into separate classes for authentication, LLM content generation, and upload orchestration to improve readability and maintainability.
+
+YouTubeUploader is doing three very different things (auth, LLM-prompting, upload orchestration) all in one class. Splitting it into 3 focused classes will make each part much easier to read, test and maintain, with no change in behavior. For example:
+
+1) Extract OAuth logic into its own Authenticator  
+2) Extract prompt+LLM calls into a ContentGenerator  
+3) Have YouTubeUploader simply coordinate those two plus the MediaFileUpload  
+
+---
+
+// youtube/auth.py  
+```python
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
+
+class OAuth2Authenticator:
+    def __init__(self, client_secrets_file, credentials_file, scopes):
+        self.client_secrets_file = client_secrets_file
+        self.credentials_file = credentials_file
+        self.scopes = scopes
+
+    def get_service(self, api_name, api_version):
+        from google.oauth2.credentials import Credentials
+        creds = None
+        if os.path.exists(self.credentials_file):
+            creds = Credentials.from_authorized_user_file(self.credentials_file, self.scopes)
+        if not creds or not creds.valid:
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                flow = InstalledAppFlow.from_client_secrets_file(self.client_secrets_file, self.scopes)
+                creds = flow.run_local_server(open_browser=True)
+            with open(self.credentials_file, 'w') as f:
+                f.write(creds.to_json())
+        return build(api_name, api_version, credentials=creds)
+```
+
+// youtube/content.py  
+```python
+import json
+from openai import OpenAI
+
+class ContentGenerator:
+    def __init__(self, model_name, llm_client=None):
+        self.model = model_name
+        self.client = llm_client or OpenAI()
+
+    def generate(self, compilation_info):
+        # build system_prompt & user_prompt here...
+        resp = self.client.chat.completions.create(
+            model=self.model,
+            messages=[...],
+            response_format={"type":"json_object"}
+        )
+        return json.loads(resp.choices[0].message.content)
+```
+
+// youtube/uploader.py  
+```python
+from youtube.auth import OAuth2Authenticator
+from youtube.content import ContentGenerator
+from googleapiclient.http import MediaFileUpload
+
+class YouTubeUploader:
+    def __init__(self, config):
+        auth_cfg = config['youtube_upload']
+        self.auth = OAuth2Authenticator(
+            auth_cfg['client_secrets_file'],
+            auth_cfg['credentials_file'],
+            SCOPES
+        )
+        self.youtube = self.auth.get_service('youtube', 'v3')
+        llm_cfg = config['llm_settings']
+        self.generator = ContentGenerator(llm_cfg['model'])
+
+    def upload_video(self, info):
+        content = self.generator.generate(info)
+        body = self._build_metadata(info, content)
+        media = MediaFileUpload(info['filepath'], resumable=True)
+        resp = self.youtube.videos().insert(
+            part=','.join(body.keys()), body=body, media_body=media
+        ).execute()
+        return {"status":"success", "video_id": resp['id']}
+```
+
+Benefits:  
+- Each class has a single responsibility  
+- Easier to test `OAuth2Authenticator` and `ContentGenerator` in isolation  
+- YouTubeUploader is now only orchestration, ~30 LOC instead of ~200.
+</issue_to_address>
+
+### Comment 6
+<location> `src/tui.py:1` </location>
+<code_context>
++import os
++import sys
++import yaml
+</code_context>
+
+<issue_to_address>
+**issue (complexity):** Consider refactoring the TUI by splitting screens into separate modules, introducing a BaseScreen for shared layout, centralizing config I/O, and moving bootstrap logic to a script.
+
+```markdown
+You can drastically reduce this file’s size & cognitive load by:
+
+  1. Splitting each `Screen` into its own module  
+  2. Factoring out shared header/footer into a `BaseScreen`  
+  3. Centralizing config I/O into a `ConfigManager`  
+  4. Moving “dummy” file‐creation into a small bootstrap script
+
+---
+
+### 1. BaseScreen (base_screen.py)
+```python
+from textual.widgets import Header, Footer
+from textual.screen import Screen
+from textual.app import ComposeResult
+
+class BaseScreen(Screen):
+    def compose(self) -> ComposeResult:
+        yield Header()
+        yield Footer()
+        for child in self.body():
+            yield child
+
+    def body(self):
+        raise NotImplementedError("Subclasses must implement body()")
+```
+
+### 2. MainScreen (screens/main_screen.py)
+```python
+from textual.containers import Container, Vertical
+from textual.widgets import Static, Button
+from textual.binding import Binding
+from base_screen import BaseScreen
+
+class MainScreen(BaseScreen):
+    BINDINGS = [
+        Binding("c", "switch_screen('config')", "Configure"),
+        Binding("r", "switch_screen('run')",    "Run Pipeline"),
+        Binding("q", "quit",                    "Quit"),
+    ]
+
+    def body(self):
+        return [
+            Container(
+                Static("[b]YouTube Video Documentation System[/b]", classes="title"),
+                Static("TUI for managing the video pipeline.",   classes="subtitle"),
+                Vertical(
+                    Button("Configure (C)", id="btn_config", variant="primary"),
+                    Button("Run (R)",        id="btn_run",    variant="success"),
+                    Button("Quit (Q)",       id="btn_quit",   variant="error"),
+                    classes="menu-buttons"
+                ),
+                classes="main-menu"
+            )
+        ]
+```
+
+### 3. ConfigManager (config_manager.py)
+```python
+import yaml
+from pathlib import Path
+
+class ConfigManager:
+    def __init__(self, path: str = "config.yaml"):
+        self.path = Path(path)
+
+    def load(self) -> dict:
+        return yaml.safe_load(self.path.read_text())
+
+    def save(self, cfg: dict) -> None:
+        self.path.write_text(yaml.dump(cfg, default_flow_style=False))
+```
+And in your `ConfigScreen.action_save_config`:
+```python
+from config_manager import ConfigManager
+
+def action_save_config(self):
+    cfg_mgr = ConfigManager(self.app.config_path)
+    cfg = cfg_mgr.load()
+    cfg['search_settings']['max_videos'] = int(self.query_one("#input_max_videos").value)
+    ...
+    cfg_mgr.save(cfg)
+    self.app.system.config = cfg
+    self.app.bell()
+    self.app.log("Configuration saved!")
+    self.app.switch_screen("main")
+```
+
+---
+
+With this you keep **all** existing behavior intact, but each file now has a single responsibility, shared code is in one place, and the main entrypoint is <200 LoC.
+</issue_to_address>
+
+### Comment 7
+<location> `main.py:393` </location>
+<code_context>
+def main():
+    """
+    Main entry point for the application.
+    """
+    if len(sys.argv) > 1:
+        parser = argparse.ArgumentParser(
+            description='YouTube Video Documentation System for Police Misconduct Research'
+        )
+
+        parser.add_argument(
+            '--config', '-c',
+            default='config.yaml',
+            help='Configuration file path (default: config.yaml)'
+        )
+
+        parser.add_argument(
+            '--mode', '-m',
+            choices=["full", "search", "download", "compile", "upload"],
+            default='full',
+            help='Operation mode (default: full)'
+        )
+
+        parser.add_argument(
+            '--max-videos', '-n',
+            type=int,
+            help='Maximum number of videos to process'
+        )
+
+        parser.add_argument(
+            '--input-file', '-i',
+            help='Input file for download or compile modes'
+        )
+
+        parser.add_argument(
+            '--downloads-dir', '-d',
+            help='Downloads directory for compile mode'
+        )
+
+        args = parser.parse_args()
+
+        try:
+            # Initialize system
+            system = VideoDocumentationSystem(args.config)
+
+            # Run based on mode
+            if args.mode == 'full':
+                print("Running full pipeline...")
+                results = system.run_full_pipeline(max_videos=args.max_videos)
+
+                if results.get('success'):
+                    print(f"\nPipeline completed successfully!")
+                    print(f"Session ID: {results['session_id']}")
+                    print(f"Videos found: {results['search_results'].get('total_found', 0)}")
+                    print(f"Videos downloaded: {results['download_results'].get('stats', {}).get('successful', 0)}")
+                    print(f"Compilations created: {results['compilation_results'].get('stats', {}).get('total_compilations', 0)}")
+                    print(f"Uploads: {len(results.get('upload_results', []))}")
+                else:
+                    print(f"\nPipeline failed. Check logs for details.")
+                    if results.get('errors'):
+                        print(f"Errors: {results['errors']}")
+
+            elif args.mode == 'search':
+                print("Running search only...")
+                videos = system.search_only(max_results=args.max_videos)
+                print(f"Found {len(videos)} videos")
+
+            elif args.mode == 'download':
+                if not args.input_file:
+                    print("Error: --input-file required for download mode")
+                    sys.exit(1)
+
+                print(f"Downloading from file: {args.input_file}")
+                results = system.download_from_file(args.input_file)
+                print(f"Downloaded {results.get('stats', {}).get('successful', 0)} videos")
+
+            elif args.mode == 'compile':
+                print("Creating compilations from downloads...")
+                results = system.compile_from_downloads(downloads_dir=args.downloads_dir)
+                print(f"Created {results.get('stats', {}).get('total_compilations', 0)} compilations")
+
+            elif args.mode == 'upload':
+                if not args.input_file:
+                    print("Error: --input-file required for upload mode (e.g., a compilation_report.json)")
+                    sys.exit(1)
+                print(f"Uploading from file: {args.input_file}")
+                system.upload_from_file(args.input_file)
+
+            # Show session summary
+            summary = system.get_session_summary()
+            print(f"\nSession Summary:")
+            print(f"Session ID: {summary['session_id']}")
+            print(f"Session directory: {summary['session_dir']}")
+            print(f"Files created: {len(summary['files_created'])}")
+
+        except KeyboardInterrupt:
+            print("\nOperation cancelled by user")
+            sys.exit(1)
+        except Exception as e:
+            print(f"Error: {str(e)}")
+            sys.exit(1)
+    else:
+        # Launch the TUI if no arguments are provided
+        from src.tui import VideoDocTUI
+        app = VideoDocTUI()
+        app.run()
+
+</code_context>
+
+<issue_to_address>
+**issue (code-quality):** Extract code out into function [×3] ([`extract-method`](https://docs.sourcery.ai/Reference/Default-Rules/refactorings/extract-method/))
+</issue_to_address>
+
+### Comment 8
+<location> `src/video_compiler.py:541` </location>
+<code_context>
+    def _create_title_page_clip(self, video: Dict[str, Any]) -> CompositeVideoClip:
+        """
+        Create a title page clip for a video segment.
+
+        Args:
+            video (Dict[str, Any]): Video information
+
+        Returns:
+            CompositeVideoClip: The title page clip
+        """
+        # Title page duration (e.g., 3 seconds)
+        title_duration = 3
+
+        # Get video details
+        title = video.get('title', 'Unknown Video Title')
+        uploader = video.get('channel_title', 'Unknown Channel')
+
+        # Try to get upload date from metadata
+        upload_date = 'Unknown Date'
+        metadata_path = video.get('metadata_path', '')
+        if metadata_path and Path(metadata_path).exists():
+            try:
+                with open(metadata_path, 'r', encoding='utf-8') as f:
+                    metadata = json.load(f)
+                    # Use upload_date from yt-dlp info if available
+                    upload_date_str = metadata.get('yt_dlp_info', {}).get('upload_date', '')
+                    if upload_date_str:
+                        upload_date = datetime.strptime(upload_date_str, '%Y%m%d').strftime('%B %d, %Y')
+            except Exception:
+                pass
+
+        # Create background clip (e.g., black)
+        bg_clip = ColorClip(
+            size=(1280, 720), # Base resolution for text composition
+            color=(0, 0, 0),
+            duration=title_duration
+        )
+
+        # Text content
+        text_content = (
+            f"Source Video\n\n"
+            f"Title: {title}\n"
+            f"Channel: {uploader}\n"
+            f"Date: {upload_date}"
+        )
+
+        # Create text clip
+        text_clip = TextClip(
+            txt=text_content,
+            fontsize=40,
+            color='white',
+            font='Arial-Bold',
+            size=(bg_clip.w * 0.8, None), # 80% width
+            method='caption',
+            align='center',
+            duration=title_duration
+        ).with_position('center')
+
+        # Composite the title page
+        title_page = CompositeVideoClip([bg_clip, text_clip])
+
+        # Resize to match the compilation resolution
+        if self.video_quality == '1080p':
+            title_page = title_page.resized(height=1080)
+        elif self.video_quality == '480p':
+            title_page = title_page.resized(height=480)
+        else:
+            title_page = title_page.resized(height=720)
+
+        return title_page
+
+</code_context>
+
+<issue_to_address>
+**issue (code-quality):** Use named expression to simplify assignment and conditional ([`use-named-expression`](https://docs.sourcery.ai/Reference/Default-Rules/refactorings/use-named-expression/))
+</issue_to_address>
+
+### Comment 9
+<location> `src/youtube_uploader.py:91` </location>
+<code_context>
+    def _get_authenticated_service(self):
+        """
+        Authenticate with YouTube and return the service object.
+
+        This method handles the OAuth 2.0 flow, which requires user interaction
+        to grant permission. The credentials are saved for future use.
+        """
+        credentials = None
+
+        # Load credentials

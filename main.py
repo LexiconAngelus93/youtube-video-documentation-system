@@ -24,7 +24,7 @@ from youtube_searcher import YouTubeSearcher
 from video_downloader import VideoDownloader
 from video_compiler import VideoCompiler
 from content_filter import ContentFilter
-from youtube_uploader import YouTubeUploader
+from youtube import YouTubeUploader
 from tracker import VideoTracker
 
 
