@@ -21,7 +21,10 @@ from moviepy import (
     concatenate_videoclips, ColorClip, config
 )
 
-from .tracker import VideoTracker
+try:
+    from .tracker import VideoTracker
+except ImportError:
+    from tracker import VideoTracker
 
 
 class VideoCompiler:

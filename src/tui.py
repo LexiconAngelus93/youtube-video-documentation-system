@@ -59,6 +59,15 @@ class MainScreen(Screen):
     def action_quit(self) -> None:
         self.app.exit()
 
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button presses."""
+        if event.button.id == "btn_config":
+            self.app.switch_screen("config")
+        elif event.button.id == "btn_run":
+            self.app.switch_screen("run")
+        elif event.button.id == "btn_quit":
+            self.app.exit()
+
 
 class ConfigScreen(Screen):
     BINDINGS = [
@@ -132,6 +141,11 @@ class ConfigScreen(Screen):
         except Exception as e:
             self.app.log(f"Error saving config: {e}")
 
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button presses."""
+        if event.button.id == "btn_save_config":
+            self.action_save_config()
+
 
 class RunScreen(Screen):
     BINDINGS = [
@@ -167,10 +181,30 @@ class RunScreen(Screen):
         if self.app.system:
             # The core system's run_full_pipeline is blocking, so we need to run it in a worker thread
             # to keep the TUI responsive.
-            self.run_worker(self.app.system.run_full_pipeline(), exclusive=True)
+            self.run_worker(self._run_pipeline_async, exclusive=True)
             self.logger.info("Pipeline execution started in background.")
         else:
             self.logger.error("Core system not initialized. Please check config.yaml.")
+
+    async def _run_pipeline_async(self) -> None:
+        """Async wrapper for running the pipeline in a worker thread."""
+        import asyncio
+        loop = asyncio.get_event_loop()
+        try:
+            result = await loop.run_in_executor(None, self.app.system.run_full_pipeline)
+            if result.get('success'):
+                self.logger.info(f"Pipeline completed successfully! Session: {result.get('session_id')}")
+            else:
+                self.logger.error(f"Pipeline failed. Errors: {result.get('errors', [])}")
+        except Exception as e:
+            self.logger.error(f"Pipeline error: {e}")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button presses."""
+        if event.button.id == "btn_start_run":
+            self.action_run_pipeline()
+        elif event.button.id == "btn_stop_run":
+            self.logger.info("Stop requested. Use Ctrl+C to interrupt.")
 
 
 # --- Main Application ---

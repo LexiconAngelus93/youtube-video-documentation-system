@@ -14,7 +14,10 @@ from datetime import datetime, timedelta
 import time
 
 # Add the Manus API client path
-from .tracker import VideoTracker
+try:
+    from .tracker import VideoTracker
+except ImportError:
+    from tracker import VideoTracker
 sys.path.append('/opt/.manus/.sandbox-runtime')
 from data_api import ApiClient
 
