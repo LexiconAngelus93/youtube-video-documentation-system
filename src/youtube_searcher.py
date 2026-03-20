@@ -14,8 +14,8 @@ from typing import Any, Dict, List, Optional
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
-from .tracker import VideoTracker
-from .youtube.auth import OAuth2Authenticator
+from tracker import VideoTracker
+from youtube.auth import OAuth2Authenticator
 
 
 class YouTubeSearcher:
