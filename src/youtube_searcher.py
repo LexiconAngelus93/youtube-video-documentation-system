@@ -6,6 +6,7 @@ This module provides functionality to search YouTube for videos related to polic
 using the YouTube Data API v3. It handles pagination, filtering, and metadata extraction.
 """
 
+import json
 import logging
 import time
 from datetime import datetime
@@ -226,6 +227,7 @@ class YouTubeSearcher:
             with open(file_path, 'r', encoding='utf-8') as f:
                 videos = json.load(f)
             self.logger.info(f"Loaded {len(videos)} videos from {file_path}")
+            self.found_videos = videos
             return videos
         except Exception as e:
             self.logger.error(f"Error loading search results: {e}")
