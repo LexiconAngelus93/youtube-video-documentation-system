@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.widgets import Header, Footer, Static, Button, RichLog, Input, Select, Checkbox
-from textual.containers import Container, Vertical, Horizontal
+from textual.containers import Container, Vertical, Horizontal, ScrollableContainer
 from textual.screen import Screen
 from textual.binding import Binding
 from textual.validation import Validator, IntegerValidator, NumberValidator
@@ -88,7 +88,7 @@ class AuthScreen(Screen):
     def compose(self) -> ComposeResult:
         yield Header()
         yield Footer()
-        with Vertical(classes="auth-container"):
+        with ScrollableContainer(classes="auth-container"):
             Static("[b]YouTube Authentication[/b]", classes="title")
             Static("Manage your YouTube API login for video uploads.", classes="subtitle")
             Static("Status: [b red]Not Authenticated[/b]", id="auth_status")
@@ -139,9 +139,9 @@ class ConfigScreen(Screen):
         self.load_config_to_tui()
 
     def compose(self) -> ComposeResult:
-        with Vertical(classes="config-container"):
-            yield Header()
-            yield Footer()
+        yield Header()
+        yield Footer()
+        with ScrollableContainer(classes="config-container"):
             Static("[b]Configuration Settings[/b]", classes="title")
             Static("Edit key settings from config.yaml below. Press ESC to go back.", classes="subtitle")
 
@@ -595,6 +595,7 @@ output:
             }
             .config-container {
                 padding: 2 5;
+                height: 1fr;
             }
             .config-label {
                 width: 30%;
@@ -617,6 +618,7 @@ output:
             .auth-container {
                 align: center middle;
                 padding: 2 5;
+                height: 1fr;
             }
             """)
 
