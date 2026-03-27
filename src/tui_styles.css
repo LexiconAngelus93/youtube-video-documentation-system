@@ -24,14 +24,30 @@
             }
             .config-container {
                 padding: 2 5;
+                height: 1fr;
+            }
+            .config-label {
+                width: 30%;
+                text-align: right;
+                margin-right: 1;
             }
             .config-input {
-                width: 50%;
+                width: 60%;
                 margin-left: 2;
+            }
+            .config-section {
+                border: solid #333333;
+                padding: 1;
+                margin-bottom: 1;
             }
             .log-panel {
                 height: 1fr;
                 border: solid #555555;
                 margin: 1;
+            }
+            .auth-container {
+                align: center middle;
+                padding: 2 5;
+                height: 1fr;
             }
             

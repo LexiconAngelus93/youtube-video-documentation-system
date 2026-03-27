@@ -36,9 +36,10 @@ class YouTubeSearcher:
 
         # Authenticate and build the YouTube service
         try:
+            upload_config = config.get('youtube_upload', {})
             self.authenticator = OAuth2Authenticator(
-                client_secrets_file='client_secrets.json',
-                credentials_file='youtube_credentials.json',
+                client_secrets_file=upload_config.get('client_secrets_file', 'client_secrets.json'),
+                credentials_file=upload_config.get('credentials_file', 'youtube_credentials.json'),
                 scopes=['https://www.googleapis.com/auth/youtube.readonly']
             )
             self.youtube = self.authenticator.get_service('youtube', 'v3')
@@ -204,7 +205,7 @@ class YouTubeSearcher:
         """
         Filter out videos that have already been processed.
         """
-        new_videos = [v for v in videos if not self.tracker.is_video_used(v['video_id'])]
+        new_videos = [v for v in videos if not self.tracker.is_used(v['video_id'])]
         self.logger.info(f"Filtered out {len(videos) - len(new_videos)} already used videos")
         return new_videos
 

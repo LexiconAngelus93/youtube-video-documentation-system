@@ -54,18 +54,16 @@ class ContentGenerator:
         segments_text = "\n".join(segment_summaries) if segment_summaries else "No specific video details available."
 
         title = f"Police Misconduct Documentation: {category.title()} Incidents ({video_count} Videos, {duration_str})"
-        description = f"""This compilation documents {video_count} incidents of police misconduct 
-        categorized under '{category}'. The total duration of this compilation is {duration_str}.
-
-        This video is part of an ongoing journalistic documentation project aimed at promoting 
-        transparency and accountability in law enforcement.
-
-        Featured incidents include:
-        {segments_text}
-
-        All footage is sourced from publicly available videos with proper attribution provided 
-        for each segment. This content is for educational and journalistic purposes.
-
-        #PoliceMisconduct #Accountability #CivilRights #Documentation #Journalism #{category.replace(' ', '')}"""
+        description = (
+            f"This compilation documents {video_count} incidents of police misconduct "
+            f"categorized under '{category}'. The total duration of this compilation is {duration_str}.\n\n"
+            f"This video is part of an ongoing journalistic documentation project aimed at promoting "
+            f"transparency and accountability in law enforcement.\n\n"
+            f"Featured incidents include:\n"
+            f"{segments_text}\n\n"
+            f"All footage is sourced from publicly available videos with proper attribution provided "
+            f"for each segment. This content is for educational and journalistic purposes.\n\n"
+            f"#PoliceMisconduct #Accountability #CivilRights #Documentation #Journalism #{category.replace(' ', '')}"
+        )
 
         return {"title": title, "description": description}

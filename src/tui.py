@@ -89,11 +89,11 @@ class AuthScreen(Screen):
         yield Header()
         yield Footer()
         with ScrollableContainer(classes="auth-container"):
-            Static("[b]YouTube Authentication[/b]", classes="title")
-            Static("Manage your YouTube API login for video uploads.", classes="subtitle")
-            Static("Status: [b red]Not Authenticated[/b]", id="auth_status")
-            Button("Login to YouTube (L)", id="btn_login_youtube", variant="primary")
-            Button("Check Authentication Status (C)", id="btn_check_auth", variant="default")
+            yield Static("[b]YouTube Authentication[/b]", classes="title")
+            yield Static("Manage your YouTube API login for video uploads.", classes="subtitle")
+            yield Static("Status: [b red]Not Authenticated[/b]", id="auth_status")
+            yield Button("Login to YouTube (L)", id="btn_login_youtube", variant="primary")
+            yield Button("Check Authentication Status (C)", id="btn_check_auth", variant="default")
 
     def action_switch_screen(self, screen_name: str) -> None:
         self.app.switch_screen(screen_name)
@@ -142,93 +142,93 @@ class ConfigScreen(Screen):
         yield Header()
         yield Footer()
         with ScrollableContainer(classes="config-container"):
-            Static("[b]Configuration Settings[/b]", classes="title")
-            Static("Edit key settings from config.yaml below. Press ESC to go back.", classes="subtitle")
+            yield Static("[b]Configuration Settings[/b]", classes="title")
+            yield Static("Edit key settings from config.yaml below. Press ESC to go back.", classes="subtitle")
 
             with Vertical(classes="config-section"):
-                Static("[b]Search Settings[/b]")
-                Horizontal(
+                yield Static("[b]Search Settings[/b]")
+                yield Horizontal(
                     Static("Keywords (comma-separated):", classes="config-label"),
                     Input(id="input_search_keywords", classes="config-input"),
                 )
-                Horizontal(
+                yield Horizontal(
                     Static("Start Date (YYYY-MM-DD):", classes="config-label"),
                     Input(id="input_search_start_date", classes="config-input"),
                 )
-                Horizontal(
+                yield Horizontal(
                     Static("End Date (YYYY-MM-DD or 'today'):", classes="config-label"),
                     Input(id="input_search_end_date", classes="config-input"),
                 )
-                Horizontal(
+                yield Horizontal(
                     Static("Region (e.g., US, GB):", classes="config-label"),
                     Input(id="input_search_region", classes="config-input"),
                 )
-                Horizontal(
+                yield Horizontal(
                     Static("Language (e.g., en, es):", classes="config-label"),
                     Input(id="input_search_language", classes="config-input"),
                 )
-                Horizontal(
+                yield Horizontal(
                     Static("Request Delay (seconds):", classes="config-label"),
                     Input(validators=[NumberValidator()], id="input_search_request_delay", classes="config-input"),
                 )
-                Horizontal(
+                yield Horizontal(
                     Static("Max Results per Keyword:", classes="config-label"),
                     Input(validators=[IntegerValidator()], id="input_search_max_results_per_keyword", classes="config-input"),
                 )
 
             with Vertical(classes="config-section"):
-                Static("[b]Download Settings[/b]")
-                Horizontal(
+                yield Static("[b]Download Settings[/b]")
+                yield Horizontal(
                     Static("Quality (e.g., best, 720p):", classes="config-label"),
                     Input(id="input_download_quality", classes="config-input"),
                 )
-                Horizontal(
+                yield Horizontal(
                     Static("Format (e.g., mp4, webm):", classes="config-label"),
                     Input(id="input_download_format", classes="config-input"),
                 )
-                Horizontal(
+                yield Horizontal(
                     Static("Max Filesize (e.g., 500M, 1G):", classes="config-label"),
                     Input(id="input_download_max_filesize", classes="config-input"),
                 )
-                Horizontal(
+                yield Horizontal(
                     Static("Concurrent Downloads:", classes="config-label"),
                     Input(validators=[IntegerValidator()], id="input_download_concurrent_downloads", classes="config-input"),
                 )
-                Horizontal(
+                yield Horizontal(
                     Static("Retry Attempts:", classes="config-label"),
                     Input(validators=[IntegerValidator()], id="input_download_retry_attempts", classes="config-input"),
                 )
 
             with Vertical(classes="config-section"):
-                Static("[b]Compilation Settings[/b]")
-                Horizontal(
+                yield Static("[b]Compilation Settings[/b]")
+                yield Horizontal(
                     Static("Target Duration (minutes):", classes="config-label"),
                     Input(validators=[IntegerValidator()], id="input_compilation_target_duration_minutes", classes="config-input"),
                 )
-                Horizontal(
+                yield Horizontal(
                     Static("Max Duration (minutes):", classes="config-label"),
                     Input(validators=[IntegerValidator()], id="input_compilation_max_duration_minutes", classes="config-input"),
                 )
-                Horizontal(
+                yield Horizontal(
                     Static("Min Duration (minutes):", classes="config-label"),
                     Input(validators=[IntegerValidator()], id="input_compilation_min_duration_minutes", classes="config-input"),
                 )
-                Horizontal(
+                yield Horizontal(
                     Static("Video Quality (e.g., 720p, 1080p):", classes="config-label"),
                     Input(id="input_compilation_video_quality", classes="config-input"),
                 )
-                Horizontal(
+                yield Horizontal(
                     Static("Attribution Duration (seconds):", classes="config-label"),
                     Input(validators=[IntegerValidator()], id="input_compilation_attribution_duration", classes="config-input"),
                 )
-                Horizontal(
+                yield Horizontal(
                     Static("Attribution Position (e.g., bottom, top):", classes="config-label"),
                     Input(id="input_compilation_attribution_position", classes="config-input"),
                 )
 
             with Vertical(classes="config-section"):
-                Static("[b]YouTube Upload Settings[/b]")
-                Horizontal(
+                yield Static("[b]YouTube Upload Settings[/b]")
+                yield Horizontal(
                     Static("Privacy Status:", classes="config-label"),
                     Select(
                         options=[("Public", "public"), ("Unlisted", "unlisted"), ("Private", "private")],
@@ -237,18 +237,18 @@ class ConfigScreen(Screen):
                         classes="config-input"
                     ),
                 )
-                Horizontal(
+                yield Horizontal(
                     Static("Category ID (e.g., 25 for News & Politics):", classes="config-label"),
                     Input(validators=[IntegerValidator()], id="input_youtube_category_id", classes="config-input"),
                 )
-                Horizontal(
+                yield Horizontal(
                     Static("Default Tags (comma-separated):", classes="config-label"),
                     Input(id="input_youtube_default_tags", classes="config-input"),
                 )
 
             with Vertical(classes="config-section"):
-                Static("[b]Logging Settings[/b]")
-                Horizontal(
+                yield Static("[b]Logging Settings[/b]")
+                yield Horizontal(
                     Static("Log Level (e.g., INFO, DEBUG):", classes="config-label"),
                     Select(
                         options=[("DEBUG", "DEBUG"), ("INFO", "INFO"), ("WARNING", "WARNING"), ("ERROR", "ERROR"), ("CRITICAL", "CRITICAL")],
@@ -257,26 +257,26 @@ class ConfigScreen(Screen):
                         classes="config-input"
                     ),
                 )
-                Horizontal(
+                yield Horizontal(
                     Static("Log File:", classes="config-label"),
                     Input(id="input_logging_file", classes="config-input"),
                 )
 
             with Vertical(classes="config-section"):
-                Static("[b]Output Settings[/b]")
-                Horizontal(
+                yield Static("[b]Output Settings[/b]")
+                yield Horizontal(
                     Static("Save Metadata:", classes="config-label"),
                     Checkbox(id="checkbox_output_save_metadata", classes="config-input"),
                 )
-                Horizontal(
+                yield Horizontal(
                     Static("Save Thumbnails:", classes="config-label"),
                     Checkbox(id="checkbox_output_save_thumbnails", classes="config-input"),
                 )
-                Horizontal(
+                yield Horizontal(
                     Static("Create Index File:", classes="config-label"),
                     Checkbox(id="checkbox_output_create_index", classes="config-input"),
                 )
-                Horizontal(
+                yield Horizontal(
                     Static("Export Format (json, csv, xlsx):", classes="config-label"),
                     Select(
                         options=[("JSON", "json"), ("CSV", "csv"), ("XLSX", "xlsx")],
@@ -286,7 +286,7 @@ class ConfigScreen(Screen):
                     ),
                 )
 
-            Button("Save Configuration (S)", id="btn_save_config", variant="primary"),
+            yield Button("Save Configuration (S)", id="btn_save_config", variant="primary")
 
     def load_config_to_tui(self) -> None:
         if not self.app.system:
@@ -408,6 +408,20 @@ class RunScreen(Screen):
         Binding("r", "run_pipeline", "Run"),
     ]
 
+    def compose(self) -> ComposeResult:
+        yield Header()
+        yield Footer()
+        yield Container(
+            Static("[b]Run Pipeline[/b]", classes="title"),
+            Static("Execute the video documentation pipeline. Press ESC to go back.", classes="subtitle"),
+            RichLog(id="log_output", highlight=True, markup=True, classes="log-panel"),
+            Horizontal(
+                Button("Run Pipeline (R)", id="btn_start_run", variant="success"),
+                Button("Stop", id="btn_stop_run", variant="error"),
+                classes="menu-buttons"
+            ),
+        )
+
     def on_mount(self) -> None:
         # Set up logging to pipe to the RichLog widget
         self.log_handler = TextualLogHandler(self.query_one("#log_output", RichLog))
@@ -436,9 +450,9 @@ class RunScreen(Screen):
         try:
             result = await loop.run_in_executor(None, self.app.system.run_full_pipeline)
             if result.get("success"):
-                self.logger.info(f"Pipeline completed successfully! Session: {result.get("session_id")}")
+                self.logger.info(f"Pipeline completed successfully! Session: {result.get('session_id')}")
             else:
-                self.logger.error(f"Pipeline failed. Errors: {result.get("errors", [])}")
+                self.logger.error(f"Pipeline failed. Errors: {result.get('errors', [])}")
         except Exception as e:
             self.logger.error(f"Pipeline error: {e}")
 
