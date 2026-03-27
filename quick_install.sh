@@ -59,21 +59,25 @@ cd "$PROJECT_DIR"
 
 # Download project files from GitHub
 echo "⬇️  Downloading project files from GitHub..."
+BRANCH_NAME="feature/terminal-gui"
 if command -v git &> /dev/null; then
     # Use git if available
-    git clone https://github.com/LexiconAngelus93/youtube-video-documentation-system.git .
+    git clone -b "$BRANCH_NAME" https://github.com/LexiconAngelus93/youtube-video-documentation-system.git .
 else
     # Use curl/wget as fallback
     if command -v curl &> /dev/null; then
-        curl -L https://github.com/LexiconAngelus93/youtube-video-documentation-system/archive/main.zip -o project.zip
+        curl -L "https://github.com/LexiconAngelus93/youtube-video-documentation-system/archive/$BRANCH_NAME.zip" -o project.zip
         unzip project.zip
-        mv youtube-video-documentation-system-main/* .
-        rm -rf youtube-video-documentation-system-main project.zip
+        # The directory name in the zip file will have the branch name with slashes replaced by dashes
+        DIR_NAME="youtube-video-documentation-system-${BRANCH_NAME//\//-}"
+        mv "$DIR_NAME"/* .
+        rm -rf "$DIR_NAME" project.zip
     elif command -v wget &> /dev/null; then
-        wget https://github.com/LexiconAngelus93/youtube-video-documentation-system/archive/main.zip -O project.zip
+        wget "https://github.com/LexiconAngelus93/youtube-video-documentation-system/archive/$BRANCH_NAME.zip" -O project.zip
         unzip project.zip
-        mv youtube-video-documentation-system-main/* .
-        rm -rf youtube-video-documentation-system-main project.zip
+        DIR_NAME="youtube-video-documentation-system-${BRANCH_NAME//\//-}"
+        mv "$DIR_NAME"/* .
+        rm -rf "$DIR_NAME" project.zip
     else
         echo "❌ Git, curl, or wget is required to download the project. Please install one of them."
         exit 1

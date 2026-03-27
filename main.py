@@ -130,7 +130,7 @@ class VideoDocumentationSystem:
             
             results['search_results'] = {
                 'total_found': len(videos),
-                'statistics': self.searcher.get_video_statistics()
+                'keywords_searched': len(self.searcher.keywords),
             }
             
             # Save search results

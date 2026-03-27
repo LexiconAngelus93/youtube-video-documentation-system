@@ -60,11 +60,7 @@ class YouTubeUploader:
         )
 
         # Initialize content generator
-        llm_config = config.get('llm_settings', {})
-        model_name = llm_config.get('model', 'gpt-4.1-mini')
-        self.content_generator = ContentGenerator(model_name)
-
-        # YouTube service (initialized on first use)
+        self.content_generator = ContentGenerator() # Initialize the hardcoded ContentGenerator    # YouTube service (initialized on first use)
         self._youtube = None
 
         # Upload statistics
