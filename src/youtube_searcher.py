@@ -8,6 +8,7 @@ using the YouTube Data API v3. It handles pagination, filtering, and metadata ex
 
 import json
 import logging
+import re
 import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -39,7 +40,8 @@ class YouTubeSearcher:
             upload_config = config.get('youtube_upload', {})
             self.authenticator = OAuth2Authenticator(
                 client_secrets_file=upload_config.get('client_secrets_file', 'client_secrets.json'),
-                credentials_file=upload_config.get('credentials_file', 'youtube_credentials.json'),
+                credentials_file=upload_config.get('search_credentials_file',
+                                                   'youtube_search_credentials.json'),
                 scopes=['https://www.googleapis.com/auth/youtube.readonly']
             )
             self.youtube = self.authenticator.get_service('youtube', 'v3')
@@ -165,7 +167,8 @@ class YouTubeSearcher:
                     'channel_id': item['snippet']['channelId'],
                     'published_at': item['snippet']['publishedAt'],
                     'duration_iso': item['contentDetails']['duration'],
-                    'view_count': item.get('statistics', {}).get('viewCount', 0),
+                    'duration_seconds': self._parse_iso8601_duration(item['contentDetails']['duration']),
+                    'view_count': int(item.get('statistics', {}).get('viewCount', 0)),
                     'description': item['snippet']['description'],
                     'thumbnails': item['snippet']['thumbnails'],
                     'url': f"https://www.youtube.com/watch?v={item['id']}",
@@ -179,6 +182,27 @@ class YouTubeSearcher:
             self.logger.error(f"Error fetching video details: {e}")
 
         return videos
+
+    @staticmethod
+    def _parse_iso8601_duration(iso_duration: str) -> int:
+        """
+        Parse an ISO 8601 duration string (e.g., 'PT5M30S') into total seconds.
+
+        Args:
+            iso_duration: ISO 8601 duration string
+
+        Returns:
+            Duration in seconds
+        """
+        match = re.match(
+            r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?', iso_duration or ''
+        )
+        if not match:
+            return 0
+        hours = int(match.group(1) or 0)
+        minutes = int(match.group(2) or 0)
+        seconds = int(match.group(3) or 0)
+        return hours * 3600 + minutes * 60 + seconds
 
     def _remove_duplicates(self, videos: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """

@@ -1,3 +1,4 @@
+import copy
 import os
 import sys
 import yaml
@@ -337,13 +338,36 @@ class ConfigScreen(Screen):
     def action_switch_screen(self, screen_name: str) -> None:
         self.app.switch_screen(screen_name)
 
+    @staticmethod
+    def _safe_int(value: str, default: int = 0) -> int:
+        """Safely convert a string to int, returning *default* on failure."""
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            return default
+
+    @staticmethod
+    def _safe_float(value: str, default: float = 0.0) -> float:
+        """Safely convert a string to float, returning *default* on failure."""
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return default
+
     def action_save_config(self) -> None:
         if not self.app.system:
             self.app.log("System not initialized, cannot save config.")
             return
 
         try:
-            config_data = self.app.system.config
+            # Work on a deep copy so a mid-save error cannot corrupt the live config
+            config_data = copy.deepcopy(self.app.system.config)
+
+            # Ensure top-level sections exist
+            for section in ("search_settings", "download_settings",
+                            "compilation_settings", "youtube_upload",
+                            "logging", "output"):
+                config_data.setdefault(section, {})
 
             # Search Settings
             config_data["search_settings"]["keywords"] = [k.strip() for k in self.query_one("#input_search_keywords", Input).value.split(",") if k.strip()]
@@ -351,27 +375,27 @@ class ConfigScreen(Screen):
             config_data["search_settings"]["end_date"] = self.query_one("#input_search_end_date", Input).value
             config_data["search_settings"]["region"] = self.query_one("#input_search_region", Input).value
             config_data["search_settings"]["language"] = self.query_one("#input_search_language", Input).value
-            config_data["search_settings"]["request_delay"] = float(self.query_one("#input_search_request_delay", Input).value)
-            config_data["search_settings"]["max_results_per_keyword"] = int(self.query_one("#input_search_max_results_per_keyword", Input).value)
+            config_data["search_settings"]["request_delay"] = self._safe_float(self.query_one("#input_search_request_delay", Input).value, 1.0)
+            config_data["search_settings"]["max_results_per_keyword"] = self._safe_int(self.query_one("#input_search_max_results_per_keyword", Input).value, 50)
 
             # Download Settings
             config_data["download_settings"]["quality"] = self.query_one("#input_download_quality", Input).value
             config_data["download_settings"]["format"] = self.query_one("#input_download_format", Input).value
             config_data["download_settings"]["max_filesize"] = self.query_one("#input_download_max_filesize", Input).value
-            config_data["download_settings"]["concurrent_downloads"] = int(self.query_one("#input_download_concurrent_downloads", Input).value)
-            config_data["download_settings"]["retry_attempts"] = int(self.query_one("#input_download_retry_attempts", Input).value)
+            config_data["download_settings"]["concurrent_downloads"] = self._safe_int(self.query_one("#input_download_concurrent_downloads", Input).value, 3)
+            config_data["download_settings"]["retry_attempts"] = self._safe_int(self.query_one("#input_download_retry_attempts", Input).value, 3)
 
             # Compilation Settings
-            config_data["compilation_settings"]["target_duration_minutes"] = int(self.query_one("#input_compilation_target_duration_minutes", Input).value)
-            config_data["compilation_settings"]["max_duration_minutes"] = int(self.query_one("#input_compilation_max_duration_minutes", Input).value)
-            config_data["compilation_settings"]["min_duration_minutes"] = int(self.query_one("#input_compilation_min_duration_minutes", Input).value)
+            config_data["compilation_settings"]["target_duration_minutes"] = self._safe_int(self.query_one("#input_compilation_target_duration_minutes", Input).value, 30)
+            config_data["compilation_settings"]["max_duration_minutes"] = self._safe_int(self.query_one("#input_compilation_max_duration_minutes", Input).value, 60)
+            config_data["compilation_settings"]["min_duration_minutes"] = self._safe_int(self.query_one("#input_compilation_min_duration_minutes", Input).value, 10)
             config_data["compilation_settings"]["video_quality"] = self.query_one("#input_compilation_video_quality", Input).value
-            config_data["compilation_settings"]["attribution_duration"] = int(self.query_one("#input_compilation_attribution_duration", Input).value)
+            config_data["compilation_settings"]["attribution_duration"] = self._safe_int(self.query_one("#input_compilation_attribution_duration", Input).value, 5)
             config_data["compilation_settings"]["attribution_position"] = self.query_one("#input_compilation_attribution_position", Input).value
 
             # YouTube Upload Settings
             config_data["youtube_upload"]["privacy_status"] = self.query_one("#select_youtube_privacy_status", Select).value
-            config_data["youtube_upload"]["category_id"] = int(self.query_one("#input_youtube_category_id", Input).value)
+            config_data["youtube_upload"]["category_id"] = self._safe_int(self.query_one("#input_youtube_category_id", Input).value, 25)
             config_data["youtube_upload"]["default_tags"] = [t.strip() for t in self.query_one("#input_youtube_default_tags", Input).value.split(",") if t.strip()]
 
             # Logging Settings
@@ -388,7 +412,7 @@ class ConfigScreen(Screen):
             with open(self.app.config_path, "w") as f:
                 yaml.dump(config_data, f, default_flow_style=False)
 
-            # Update the core system's config
+            # Only update the live config after a successful file write
             self.app.system.config = config_data
             self.app.bell()
             self.app.log("Configuration saved successfully!")
